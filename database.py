@@ -11,6 +11,12 @@ import requests as http_requests
 from datetime import datetime, date, timedelta
 from contextlib import contextmanager
 
+try:
+    import streamlit as st
+    HAS_STREAMLIT = True
+except ImportError:
+    HAS_STREAMLIT = False
+
 # ─── Backend Detection ──────────────────────────────────────────────────────────
 
 TURSO_URL = None
@@ -147,21 +153,42 @@ def _turso_executescript(sql_script: str):
     resp.raise_for_status()
 
 
-# ─── Local SQLite Connection ────────────────────────────────────────────────────
+# ─── Local SQLite Connection Pool (Cached) ──────────────────────────────────────
+
+if HAS_STREAMLIT:
+    @st.cache_resource
+    def get_db_pool():
+        """Cached database connection pool - reused across requests."""
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging for better concurrency
+        conn.execute("PRAGMA synchronous = NORMAL")  # Faster writes
+        conn.execute("PRAGMA cache_size = -64000")  # 64MB cache
+        return conn
+else:
+    _local_conn = None
+    def get_db_pool():
+        global _local_conn
+        if _local_conn is None:
+            _local_conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+            _local_conn.row_factory = sqlite3.Row
+            _local_conn.execute("PRAGMA foreign_keys = ON")
+            _local_conn.execute("PRAGMA journal_mode = WAL")
+            _local_conn.execute("PRAGMA synchronous = NORMAL")
+            _local_conn.execute("PRAGMA cache_size = -64000")
+        return _local_conn
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    """Context manager for database operations with automatic commit/rollback."""
+    conn = get_db_pool()
     try:
         yield conn
         conn.commit()
     except Exception:
         conn.rollback()
         raise
-    finally:
-        conn.close()
 
 
 # ─── Schema ────────────────────────────────────────────────────────────────────
@@ -224,8 +251,13 @@ SCHEMA_SQL = """
     );
     CREATE INDEX IF NOT EXISTS idx_time_logs_date ON time_logs(log_date);
     CREATE INDEX IF NOT EXISTS idx_time_logs_user ON time_logs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_time_logs_task ON time_logs(task_id);
+    CREATE INDEX IF NOT EXISTS idx_time_logs_user_date ON time_logs(user_id, log_date);
     CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category_id);
+    CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id);
+    CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id);
 """
 
 
@@ -275,13 +307,22 @@ def get_user_by_username(username: str):
 
 # ─── Category Operations ───────────────────────────────────────────────────────
 
-def get_categories(user_id: int):
-    return _query(
-        "SELECT * FROM categories WHERE user_id = ? ORDER BY sort_order, name", [user_id]
-    )
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=30, show_spinner=False)
+    def get_categories(user_id: int):
+        return _query(
+            "SELECT * FROM categories WHERE user_id = ? ORDER BY sort_order, name", [user_id]
+        )
+else:
+    def get_categories(user_id: int):
+        return _query(
+            "SELECT * FROM categories WHERE user_id = ? ORDER BY sort_order, name", [user_id]
+        )
 
 
 def create_category(user_id: int, name: str, color: str = "#4A90D9", icon: str = "📁"):
+    if HAS_STREAMLIT:
+        get_categories.clear()  # Clear cache when data changes
     return _query(
         "INSERT INTO categories (user_id, name, color, icon) VALUES (?, ?, ?, ?)",
         [user_id, name, color, icon], fetch="lastrowid"
@@ -289,6 +330,9 @@ def create_category(user_id: int, name: str, color: str = "#4A90D9", icon: str =
 
 
 def update_category(cat_id: int, name: str = None, color: str = None, icon: str = None):
+    if HAS_STREAMLIT:
+        get_categories.clear()
+        get_tasks.clear()
     if name:
         _query("UPDATE categories SET name = ? WHERE id = ?", [name, cat_id], fetch="none")
     if color:
@@ -298,27 +342,48 @@ def update_category(cat_id: int, name: str = None, color: str = None, icon: str 
 
 
 def delete_category(cat_id: int):
+    if HAS_STREAMLIT:
+        get_categories.clear()
+        get_tasks.clear()
     _query("DELETE FROM categories WHERE id = ?", [cat_id], fetch="none")
 
 
 # ─── Task Operations ───────────────────────────────────────────────────────────
 
-def get_tasks(user_id: int, category_id: int = None, status: str = None):
-    query = """SELECT t.*, c.name as category_name, c.color as category_color,
-               c.icon as category_icon FROM tasks t
-               JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"""
-    params = [user_id]
-    if category_id:
-        query += " AND t.category_id = ?"
-        params.append(category_id)
-    if status:
-        query += " AND t.status = ?"
-        params.append(status)
-    query += " ORDER BY t.sort_order, t.created_at DESC"
-    return _query(query, params)
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=20, show_spinner=False)
+    def get_tasks(user_id: int, category_id: int = None, status: str = None):
+        query = """SELECT t.*, c.name as category_name, c.color as category_color,
+                   c.icon as category_icon FROM tasks t
+                   JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"""
+        params = [user_id]
+        if category_id:
+            query += " AND t.category_id = ?"
+            params.append(category_id)
+        if status:
+            query += " AND t.status = ?"
+            params.append(status)
+        query += " ORDER BY t.sort_order, t.created_at DESC"
+        return _query(query, params)
+else:
+    def get_tasks(user_id: int, category_id: int = None, status: str = None):
+        query = """SELECT t.*, c.name as category_name, c.color as category_color,
+                   c.icon as category_icon FROM tasks t
+                   JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"""
+        params = [user_id]
+        if category_id:
+            query += " AND t.category_id = ?"
+            params.append(category_id)
+        if status:
+            query += " AND t.status = ?"
+            params.append(status)
+        query += " ORDER BY t.sort_order, t.created_at DESC"
+        return _query(query, params)
 
 
 def create_task(user_id: int, category_id: int, title: str, description: str = ""):
+    if HAS_STREAMLIT:
+        get_tasks.clear()
     return _query(
         "INSERT INTO tasks (user_id, category_id, title, description) VALUES (?, ?, ?, ?)",
         [user_id, category_id, title, description], fetch="lastrowid"
@@ -326,6 +391,8 @@ def create_task(user_id: int, category_id: int, title: str, description: str = "
 
 
 def update_task(task_id: int, **kwargs):
+    if HAS_STREAMLIT:
+        get_tasks.clear()
     allowed = {'title', 'description', 'status', 'priority', 'category_id', 'sort_order'}
     for key, val in kwargs.items():
         if key in allowed and val is not None:
@@ -336,24 +403,39 @@ def update_task(task_id: int, **kwargs):
 
 
 def delete_task(task_id: int):
+    if HAS_STREAMLIT:
+        get_tasks.clear()
+        get_subtasks.clear()
+        get_time_logs.clear()
     _query("DELETE FROM tasks WHERE id = ?", [task_id], fetch="none")
 
 
 # ─── Subtask Operations ────────────────────────────────────────────────────────
 
-def get_subtasks(task_id: int):
-    return _query(
-        "SELECT * FROM subtasks WHERE task_id = ? ORDER BY sort_order, created_at", [task_id]
-    )
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=20, show_spinner=False)
+    def get_subtasks(task_id: int):
+        return _query(
+            "SELECT * FROM subtasks WHERE task_id = ? ORDER BY sort_order, created_at", [task_id]
+        )
+else:
+    def get_subtasks(task_id: int):
+        return _query(
+            "SELECT * FROM subtasks WHERE task_id = ? ORDER BY sort_order, created_at", [task_id]
+        )
 
 
 def create_subtask(task_id: int, title: str):
+    if HAS_STREAMLIT:
+        get_subtasks.clear()
     return _query(
         "INSERT INTO subtasks (task_id, title) VALUES (?, ?)", [task_id, title], fetch="lastrowid"
     )
 
 
 def toggle_subtask(subtask_id: int):
+    if HAS_STREAMLIT:
+        get_subtasks.clear()
     _query(
         "UPDATE subtasks SET is_done = CASE WHEN is_done = 1 THEN 0 ELSE 1 END WHERE id = ?",
         [subtask_id], fetch="none"
@@ -361,10 +443,14 @@ def toggle_subtask(subtask_id: int):
 
 
 def delete_subtask(subtask_id: int):
+    if HAS_STREAMLIT:
+        get_subtasks.clear()
     _query("DELETE FROM subtasks WHERE id = ?", [subtask_id], fetch="none")
 
 
 def update_subtask(subtask_id: int, title: str):
+    if HAS_STREAMLIT:
+        get_subtasks.clear()
     _query("UPDATE subtasks SET title = ? WHERE id = ?", [title, subtask_id], fetch="none")
 
 
@@ -373,6 +459,13 @@ def update_subtask(subtask_id: int, title: str):
 def add_time_log(user_id: int, task_id: int, duration_minutes: float,
                  log_date: str = None, note: str = "", source: str = "manual",
                  subtask_id: int = None):
+    if HAS_STREAMLIT:
+        get_time_logs.clear()
+        get_daily_summary.clear()
+        get_weekly_summary.clear()
+        get_monthly_summary.clear()
+        get_daily_trend.clear()
+        get_task_total_time.clear()
     if log_date is None:
         log_date = date.today().isoformat()
     return _query(
@@ -383,113 +476,232 @@ def add_time_log(user_id: int, task_id: int, duration_minutes: float,
     )
 
 
-def get_time_logs(user_id: int, task_id: int = None, start_date: str = None,
-                  end_date: str = None):
-    query = """
-        SELECT tl.*, t.title as task_title, c.name as category_name,
-               c.color as category_color, c.icon as category_icon
-        FROM time_logs tl
-        JOIN tasks t ON tl.task_id = t.id
-        JOIN categories c ON t.category_id = c.id
-        WHERE tl.user_id = ?
-    """
-    params = [user_id]
-    if task_id:
-        query += " AND tl.task_id = ?"
-        params.append(task_id)
-    if start_date:
-        query += " AND tl.log_date >= ?"
-        params.append(start_date)
-    if end_date:
-        query += " AND tl.log_date <= ?"
-        params.append(end_date)
-    query += " ORDER BY tl.log_date DESC, tl.created_at DESC"
-    return _query(query, params)
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=15, show_spinner=False)
+    def get_time_logs(user_id: int, task_id: int = None, start_date: str = None,
+                      end_date: str = None):
+        query = """
+            SELECT tl.*, t.title as task_title, c.name as category_name,
+                   c.color as category_color, c.icon as category_icon
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ?
+        """
+        params = [user_id]
+        if task_id:
+            query += " AND tl.task_id = ?"
+            params.append(task_id)
+        if start_date:
+            query += " AND tl.log_date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND tl.log_date <= ?"
+            params.append(end_date)
+        query += " ORDER BY tl.log_date DESC, tl.created_at DESC"
+        return _query(query, params)
+else:
+    def get_time_logs(user_id: int, task_id: int = None, start_date: str = None,
+                      end_date: str = None):
+        query = """
+            SELECT tl.*, t.title as task_title, c.name as category_name,
+                   c.color as category_color, c.icon as category_icon
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ?
+        """
+        params = [user_id]
+        if task_id:
+            query += " AND tl.task_id = ?"
+            params.append(task_id)
+        if start_date:
+            query += " AND tl.log_date >= ?"
+            params.append(start_date)
+        if end_date:
+            query += " AND tl.log_date <= ?"
+            params.append(end_date)
+        query += " ORDER BY tl.log_date DESC, tl.created_at DESC"
+        return _query(query, params)
 
 
 def delete_time_log(log_id: int):
+    if HAS_STREAMLIT:
+        get_time_logs.clear()
+        get_daily_summary.clear()
+        get_weekly_summary.clear()
+        get_monthly_summary.clear()
+        get_daily_trend.clear()
+        get_task_total_time.clear()
     _query("DELETE FROM time_logs WHERE id = ?", [log_id], fetch="none")
 
 
-# ─── Analytics Queries ──────────────────────────────────────────────────────────
+# ─── Analytics Queries (Cached) ─────────────────────────────────────────────────
 
-def get_daily_summary(user_id: int, target_date: str = None):
-    if target_date is None:
-        target_date = date.today().isoformat()
-    return _query("""
-        SELECT c.name as category_name, c.color, c.icon,
-               t.title as task_title, t.id as task_id,
-               SUM(tl.duration_minutes) as total_minutes
-        FROM time_logs tl
-        JOIN tasks t ON tl.task_id = t.id
-        JOIN categories c ON t.category_id = c.id
-        WHERE tl.user_id = ? AND tl.log_date = ?
-        GROUP BY c.id, t.id
-        ORDER BY total_minutes DESC
-    """, [user_id, target_date])
-
-
-def get_weekly_summary(user_id: int, week_start: str = None):
-    if week_start is None:
-        today = date.today()
-        week_start = (today - timedelta(days=today.weekday())).isoformat()
-    week_end = (date.fromisoformat(week_start) + timedelta(days=6)).isoformat()
-    return _query("""
-        SELECT c.name as category_name, c.color, c.icon,
-               SUM(tl.duration_minutes) as total_minutes,
-               COUNT(DISTINCT tl.log_date) as active_days
-        FROM time_logs tl
-        JOIN tasks t ON tl.task_id = t.id
-        JOIN categories c ON t.category_id = c.id
-        WHERE tl.user_id = ? AND tl.log_date >= ? AND tl.log_date <= ?
-        GROUP BY c.id
-        ORDER BY total_minutes DESC
-    """, [user_id, week_start, week_end])
-
-
-def get_monthly_summary(user_id: int, year: int = None, month: int = None):
-    if year is None:
-        year = date.today().year
-    if month is None:
-        month = date.today().month
-    month_start = f"{year}-{month:02d}-01"
-    if month == 12:
-        month_end = f"{year + 1}-01-01"
-    else:
-        month_end = f"{year}-{month + 1:02d}-01"
-    return _query("""
-        SELECT c.name as category_name, c.color, c.icon,
-               SUM(tl.duration_minutes) as total_minutes,
-               COUNT(DISTINCT tl.log_date) as active_days
-        FROM time_logs tl
-        JOIN tasks t ON tl.task_id = t.id
-        JOIN categories c ON t.category_id = c.id
-        WHERE tl.user_id = ? AND tl.log_date >= ? AND tl.log_date < ?
-        GROUP BY c.id
-        ORDER BY total_minutes DESC
-    """, [user_id, month_start, month_end])
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=60, show_spinner=False)
+    def get_daily_summary(user_id: int, target_date: str = None):
+        if target_date is None:
+            target_date = date.today().isoformat()
+        return _query("""
+            SELECT c.name as category_name, c.color, c.icon,
+                   t.title as task_title, t.id as task_id,
+                   SUM(tl.duration_minutes) as total_minutes
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date = ?
+            GROUP BY c.id, t.id
+            ORDER BY total_minutes DESC
+        """, [user_id, target_date])
+else:
+    def get_daily_summary(user_id: int, target_date: str = None):
+        if target_date is None:
+            target_date = date.today().isoformat()
+        return _query("""
+            SELECT c.name as category_name, c.color, c.icon,
+                   t.title as task_title, t.id as task_id,
+                   SUM(tl.duration_minutes) as total_minutes
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date = ?
+            GROUP BY c.id, t.id
+            ORDER BY total_minutes DESC
+        """, [user_id, target_date])
 
 
-def get_daily_trend(user_id: int, days: int = 30):
-    start_date = (date.today() - timedelta(days=days)).isoformat()
-    return _query("""
-        SELECT tl.log_date, c.name as category_name, c.color,
-               SUM(tl.duration_minutes) as total_minutes
-        FROM time_logs tl
-        JOIN tasks t ON tl.task_id = t.id
-        JOIN categories c ON t.category_id = c.id
-        WHERE tl.user_id = ? AND tl.log_date >= ?
-        GROUP BY tl.log_date, c.id
-        ORDER BY tl.log_date
-    """, [user_id, start_date])
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=60, show_spinner=False)
+    def get_weekly_summary(user_id: int, week_start: str = None):
+        if week_start is None:
+            today = date.today()
+            week_start = (today - timedelta(days=today.weekday())).isoformat()
+        week_end = (date.fromisoformat(week_start) + timedelta(days=6)).isoformat()
+        return _query("""
+            SELECT c.name as category_name, c.color, c.icon,
+                   SUM(tl.duration_minutes) as total_minutes,
+                   COUNT(DISTINCT tl.log_date) as active_days
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date >= ? AND tl.log_date <= ?
+            GROUP BY c.id
+            ORDER BY total_minutes DESC
+        """, [user_id, week_start, week_end])
+else:
+    def get_weekly_summary(user_id: int, week_start: str = None):
+        if week_start is None:
+            today = date.today()
+            week_start = (today - timedelta(days=today.weekday())).isoformat()
+        week_end = (date.fromisoformat(week_start) + timedelta(days=6)).isoformat()
+        return _query("""
+            SELECT c.name as category_name, c.color, c.icon,
+                   SUM(tl.duration_minutes) as total_minutes,
+                   COUNT(DISTINCT tl.log_date) as active_days
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date >= ? AND tl.log_date <= ?
+            GROUP BY c.id
+            ORDER BY total_minutes DESC
+        """, [user_id, week_start, week_end])
 
 
-def get_task_total_time(task_id: int):
-    result = _query(
-        "SELECT COALESCE(SUM(duration_minutes), 0) as total FROM time_logs WHERE task_id = ?",
-        [task_id], fetch="one"
-    )
-    if result:
-        total = result['total']
-        return float(total) if total else 0
-    return 0
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=120, show_spinner=False)
+    def get_monthly_summary(user_id: int, year: int = None, month: int = None):
+        if year is None:
+            year = date.today().year
+        if month is None:
+            month = date.today().month
+        month_start = f"{year}-{month:02d}-01"
+        if month == 12:
+            month_end = f"{year + 1}-01-01"
+        else:
+            month_end = f"{year}-{month + 1:02d}-01"
+        return _query("""
+            SELECT c.name as category_name, c.color, c.icon,
+                   SUM(tl.duration_minutes) as total_minutes,
+                   COUNT(DISTINCT tl.log_date) as active_days
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date >= ? AND tl.log_date < ?
+            GROUP BY c.id
+            ORDER BY total_minutes DESC
+        """, [user_id, month_start, month_end])
+else:
+    def get_monthly_summary(user_id: int, year: int = None, month: int = None):
+        if year is None:
+            year = date.today().year
+        if month is None:
+            month = date.today().month
+        month_start = f"{year}-{month:02d}-01"
+        if month == 12:
+            month_end = f"{year + 1}-01-01"
+        else:
+            month_end = f"{year}-{month + 1:02d}-01"
+        return _query("""
+            SELECT c.name as category_name, c.color, c.icon,
+                   SUM(tl.duration_minutes) as total_minutes,
+                   COUNT(DISTINCT tl.log_date) as active_days
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date >= ? AND tl.log_date < ?
+            GROUP BY c.id
+            ORDER BY total_minutes DESC
+        """, [user_id, month_start, month_end])
+
+
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=60, show_spinner=False)
+    def get_daily_trend(user_id: int, days: int = 30):
+        start_date = (date.today() - timedelta(days=days)).isoformat()
+        return _query("""
+            SELECT tl.log_date, c.name as category_name, c.color,
+                   SUM(tl.duration_minutes) as total_minutes
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date >= ?
+            GROUP BY tl.log_date, c.id
+            ORDER BY tl.log_date
+        """, [user_id, start_date])
+else:
+    def get_daily_trend(user_id: int, days: int = 30):
+        start_date = (date.today() - timedelta(days=days)).isoformat()
+        return _query("""
+            SELECT tl.log_date, c.name as category_name, c.color,
+                   SUM(tl.duration_minutes) as total_minutes
+            FROM time_logs tl
+            JOIN tasks t ON tl.task_id = t.id
+            JOIN categories c ON t.category_id = c.id
+            WHERE tl.user_id = ? AND tl.log_date >= ?
+            GROUP BY tl.log_date, c.id
+            ORDER BY tl.log_date
+        """, [user_id, start_date])
+
+
+if HAS_STREAMLIT:
+    @st.cache_data(ttl=30, show_spinner=False)
+    def get_task_total_time(task_id: int):
+        result = _query(
+            "SELECT COALESCE(SUM(duration_minutes), 0) as total FROM time_logs WHERE task_id = ?",
+            [task_id], fetch="one"
+        )
+        if result:
+            total = result['total']
+            return float(total) if total else 0
+        return 0
+else:
+    def get_task_total_time(task_id: int):
+        result = _query(
+            "SELECT COALESCE(SUM(duration_minutes), 0) as total FROM time_logs WHERE task_id = ?",
+            [task_id], fetch="one"
+        )
+        if result:
+            total = result['total']
+            return float(total) if total else 0
+        return 0
