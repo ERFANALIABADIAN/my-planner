@@ -1,8 +1,10 @@
 """
 Timer page - Stopwatch/Pomodoro timer with time logging.
+Uses JavaScript-based timer for smooth live counting.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import datetime, date
 import database as db
 
@@ -15,6 +17,84 @@ def format_seconds(seconds: int) -> str:
     if hours > 0:
         return f"{hours:02d}:{minutes:02d}:{secs:02d}"
     return f"{minutes:02d}:{secs:02d}"
+
+
+def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stopwatch", total_seconds: int = 0):
+    """Render a JavaScript-based live timer that counts without page refresh."""
+    timer_html = f"""
+    <div id="timer-container" style="text-align:center; padding:1.5rem 0;">
+        <div id="timer-display" style="font-size:4rem; font-weight:800; color:#1E1E2E;
+             font-family:'Courier New', monospace; letter-spacing:0.2rem; user-select:none;">
+            00:00
+        </div>
+        <div id="timer-status" style="margin-top:0.5rem; font-size:0.85rem; color:#6B7280;"></div>
+    </div>
+    <script>
+        (function() {{
+            var startElapsed = {elapsed_seconds};
+            var isRunning = {'true' if is_running else 'false'};
+            var mode = "{mode}";
+            var totalSeconds = {total_seconds};
+            var startTime = Date.now();
+
+            function formatTime(sec) {{
+                sec = Math.max(0, Math.floor(sec));
+                var h = Math.floor(sec / 3600);
+                var m = Math.floor((sec % 3600) / 60);
+                var s = sec % 60;
+                if (h > 0) {{
+                    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+                }}
+                return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+            }}
+
+            function update() {{
+                var display = document.getElementById('timer-display');
+                var status = document.getElementById('timer-status');
+                if (!display) return;
+
+                var current;
+                if (isRunning) {{
+                    current = startElapsed + Math.floor((Date.now() - startTime) / 1000);
+                }} else {{
+                    current = startElapsed;
+                }}
+
+                if (mode === 'pomodoro') {{
+                    var remaining = Math.max(0, totalSeconds - current);
+                    display.textContent = formatTime(remaining);
+                    display.style.color = remaining === 0 ? '#EF4444' : '#1E1E2E';
+                    if (remaining === 0 && isRunning) {{
+                        status.textContent = '🍅 Time is up!';
+                        status.style.color = '#EF4444';
+                    }}
+                }} else {{
+                    display.textContent = formatTime(current);
+                }}
+
+                if (isRunning) {{
+                    status.innerHTML = '<span style="animation:pulse 2s infinite;">🔴 Running...</span>';
+                }} else if (current > 0) {{
+                    status.textContent = '⏸ Paused';
+                }} else {{
+                    status.textContent = '';
+                }}
+            }}
+
+            update();
+            if (isRunning) {{
+                setInterval(update, 200);
+            }}
+        }})();
+    </script>
+    <style>
+        @keyframes pulse {{
+            0%, 100% {{ opacity: 1; }}
+            50% {{ opacity: 0.4; }}
+        }}
+    </style>
+    """
+    components.html(timer_html, height=160)
 
 
 def render_timer_page():
@@ -116,36 +196,20 @@ def render_timer_page():
 
         elapsed = int(elapsed)
 
-        # Display
+        # Display timer using JavaScript component (smooth, no lag)
         if "🍅" in timer_mode:
             total_seconds = st.session_state.get('pomodoro_minutes', 25) * 60
-            remaining = max(0, total_seconds - elapsed)
-            progress_pct = min(1.0, elapsed / total_seconds) if total_seconds > 0 else 0
-
-            st.markdown(
-                f"""<div style='text-align:center; padding:2rem;'>
-                    <div style='font-size:4rem; font-weight:800; color:{"#EF4444" if remaining == 0 else "#1E1E2E"};
-                         font-family:monospace; letter-spacing:0.2rem;'>
-                        {format_seconds(remaining)}
-                    </div>
-                </div>""",
-                unsafe_allow_html=True
+            js_timer_component(
+                elapsed_seconds=elapsed,
+                is_running=st.session_state['timer_running'],
+                mode="pomodoro",
+                total_seconds=total_seconds
             )
-            st.progress(progress_pct)
-
-            if remaining == 0 and st.session_state['timer_running']:
-                st.balloons()
-                st.success("🍅 Time's up! Great focus session!")
-                st.session_state['timer_running'] = False
         else:
-            st.markdown(
-                f"""<div style='text-align:center; padding:2rem;'>
-                    <div style='font-size:4rem; font-weight:800; color:#1E1E2E;
-                         font-family:monospace; letter-spacing:0.2rem;'>
-                        {format_seconds(elapsed)}
-                    </div>
-                </div>""",
-                unsafe_allow_html=True
+            js_timer_component(
+                elapsed_seconds=elapsed,
+                is_running=st.session_state['timer_running'],
+                mode="stopwatch"
             )
 
         # Timer Controls
@@ -202,27 +266,7 @@ def render_timer_page():
                 st.session_state['timer_elapsed'] = 0
                 st.rerun()
 
-    # Auto-refresh when timer is running
-    if st.session_state['timer_running']:
-        st.markdown(
-            """<div style='text-align:center; color:#6B7280; font-size:0.8rem;
-                 animation: pulse 2s infinite;'>
-                🔴 Timer is running... (refresh page to update display)
-            </div>
-            <style>
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.5; }
-                }
-            </style>""",
-            unsafe_allow_html=True
-        )
-        # Use streamlit-autorefresh for auto-updating
-        try:
-            from streamlit_autorefresh import st_autorefresh
-            st_autorefresh(interval=1000, limit=None, key="timer_refresh")
-        except ImportError:
-            st.caption("💡 Install `streamlit-autorefresh` for live timer updates.")
+    # No auto-refresh needed - JavaScript timer handles live display
 
     # ─── Today's Sessions ─────────────────────────────────────
     st.markdown("---")
