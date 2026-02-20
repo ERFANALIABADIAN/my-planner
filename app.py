@@ -43,22 +43,30 @@ st.markdown("""
     /* HIDE sidebar collapse/expand buttons completely - sidebar stays fixed */
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"],
-    button[kind="header"] {
+    button[kind="header"],
+    section[data-testid="stSidebar"] > div:first-child > button {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
+        opacity: 0 !important;
     }
     
-    /* Force sidebar to always stay open */
-    [data-testid="stSidebar"] {
+    /* Force sidebar to always stay open and prevent collapse */
+    section[data-testid="stSidebar"] {
         position: relative !important;
-        transform: none !important;
+        transform: translateX(0) !important;
+        transition: none !important;
+        min-width: 21rem !important;
+        max-width: 21rem !important;
+        background-color: #F8F9FA !important;
+        border-right: 1px solid #E5E7EB !important;
     }
-
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background-color: #F8F9FA;
-        border-right: 1px solid #E5E7EB;
+    section[data-testid="stSidebar"][aria-expanded="false"] {
+        transform: translateX(0) !important;
+        margin-left: 0 !important;
+    }
+    section[data-testid="stSidebar"] > div {
+        width: 21rem !important;
     }
     [data-testid="stSidebar"] .stMarkdown h3 {
         color: #374151;
