@@ -1,0 +1,18 @@
+# Database
+planner.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets (local)
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

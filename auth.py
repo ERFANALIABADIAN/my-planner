@@ -1,0 +1,139 @@
+"""
+Authentication module for My Planner.
+Handles user login, registration, and session management.
+"""
+
+import bcrypt
+import streamlit as st
+from database import get_user_by_username, create_user
+
+
+def hash_password(password: str) -> str:
+    """Hash a password using bcrypt."""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password against its hash."""
+    return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+
+
+def login_user(username: str, password: str) -> bool:
+    """Attempt to login a user. Returns True if successful."""
+    user = get_user_by_username(username)
+    if user and verify_password(password, user['password_hash']):
+        st.session_state['authenticated'] = True
+        st.session_state['user_id'] = user['id']
+        st.session_state['username'] = user['username']
+        st.session_state['display_name'] = user['display_name']
+        return True
+    return False
+
+
+def register_user(username: str, password: str, display_name: str = None) -> tuple:
+    """Register a new user. Returns (success: bool, message: str)."""
+    if len(username) < 3:
+        return False, "Username must be at least 3 characters."
+    if len(password) < 4:
+        return False, "Password must be at least 4 characters."
+    existing = get_user_by_username(username)
+    if existing:
+        return False, "Username already exists."
+    try:
+        pw_hash = hash_password(password)
+        user_id = create_user(username, pw_hash, display_name)
+        st.session_state['authenticated'] = True
+        st.session_state['user_id'] = user_id
+        st.session_state['username'] = username
+        st.session_state['display_name'] = display_name or username
+        return True, "Account created successfully!"
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+
+
+def logout_user():
+    """Clear session state to logout."""
+    for key in ['authenticated', 'user_id', 'username', 'display_name',
+                'timer_running', 'timer_start', 'timer_task_id']:
+        st.session_state.pop(key, None)
+
+
+def is_authenticated() -> bool:
+    """Check if user is currently authenticated."""
+    return st.session_state.get('authenticated', False)
+
+
+def get_current_user_id() -> int:
+    """Get current logged-in user's ID."""
+    return st.session_state.get('user_id')
+
+
+def render_login_page():
+    """Render the login/register page."""
+
+    st.markdown("""
+    <style>
+        .login-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .login-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1E1E2E;
+            margin-bottom: 0.5rem;
+        }
+        .login-subtitle {
+            text-align: center;
+            color: #6B7280;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 2, 1])
+
+    with col2:
+        st.markdown('<div class="login-title">📋 My Planner</div>', unsafe_allow_html=True)
+        st.markdown('<div class="login-subtitle">Track your tasks, manage your time</div>', unsafe_allow_html=True)
+
+        tab_login, tab_register = st.tabs(["🔐 Login", "📝 Register"])
+
+        with tab_login:
+            with st.form("login_form", clear_on_submit=False):
+                username = st.text_input("Username", placeholder="Enter your username")
+                password = st.text_input("Password", type="password", placeholder="Enter your password")
+                submitted = st.form_submit_button("Login", use_container_width=True, type="primary")
+
+                if submitted:
+                    if username and password:
+                        if login_user(username, password):
+                            st.rerun()
+                        else:
+                            st.error("Invalid username or password.")
+                    else:
+                        st.warning("Please enter both username and password.")
+
+        with tab_register:
+            with st.form("register_form", clear_on_submit=False):
+                new_username = st.text_input("Username", placeholder="Choose a username")
+                new_display = st.text_input("Display Name", placeholder="Your name (optional)")
+                new_password = st.text_input("Password", type="password", placeholder="Choose a password")
+                new_password2 = st.text_input("Confirm Password", type="password", placeholder="Re-enter password")
+                reg_submitted = st.form_submit_button("Create Account", use_container_width=True, type="primary")
+
+                if reg_submitted:
+                    if new_password != new_password2:
+                        st.error("Passwords do not match.")
+                    elif new_username and new_password:
+                        success, msg = register_user(new_username, new_password, new_display)
+                        if success:
+                            st.success(msg)
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Please fill in all required fields.")
