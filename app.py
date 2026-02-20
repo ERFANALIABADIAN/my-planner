@@ -29,36 +29,30 @@ st.markdown("""
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
 
-    /* Hide Streamlit branding but keep sidebar toggle */
+    /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header[data-testid="stHeader"] {
-        background: transparent !important;
+        visibility: hidden !important;
         height: 0 !important;
         min-height: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
-        overflow: visible !important;
     }
-    /* Hide all header content except the sidebar toggle button */
-    header[data-testid="stHeader"] > *:not([data-testid="collapsedControl"]) {
-        display: none !important;
-    }
-    /* ALWAYS show sidebar collapse/expand button - all possible testids */
+    
+    /* HIDE sidebar collapse/expand buttons completely - sidebar stays fixed */
     [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
-        visibility: visible !important;
-        display: flex !important;
-        opacity: 1 !important;
-        position: fixed !important;
-        top: 0.5rem !important;
-        left: 0.5rem !important;
-        z-index: 999999 !important;
-        background: white !important;
-        border-radius: 8px !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
-        padding: 0.3rem !important;
-        pointer-events: all !important;
+    [data-testid="stSidebarCollapsedControl"],
+    button[kind="header"] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+    
+    /* Force sidebar to always stay open */
+    [data-testid="stSidebar"] {
+        position: relative !important;
+        transform: none !important;
     }
 
     /* Sidebar styling */
