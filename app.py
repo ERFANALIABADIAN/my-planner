@@ -44,11 +44,16 @@ st.markdown("""
     [data-testid="collapsedControl"],
     [data-testid="stSidebarCollapsedControl"],
     button[kind="header"],
-    section[data-testid="stSidebar"] > div:first-child > button {
+    section[data-testid="stSidebar"] > div > button,
+    section[data-testid="stSidebar"] button[aria-label*="ollapse"],
+    section[data-testid="stSidebar"] button svg,
+    [data-testid="baseButton-header"] {
         display: none !important;
         visibility: hidden !important;
         pointer-events: none !important;
         opacity: 0 !important;
+        width: 0 !important;
+        height: 0 !important;
     }
     
     /* Force sidebar to always stay open and prevent collapse */
@@ -210,14 +215,13 @@ with st.sidebar:
         btn_type = "primary" if st.session_state['current_page'] == page_key else "secondary"
         if st.button(label, key=f"nav_{page_key}", use_container_width=True, type=btn_type):
             st.session_state['current_page'] = page_key
-            st.rerun()
 
     st.markdown("---")
 
     # Logout
     if st.button("🚪 Logout", use_container_width=True):
         logout_user()
-        st.rerun()
+
 
 # ─── Page Router ──────────────────────────────────────────────
 current_page = st.session_state.get('current_page', 'tasks')

@@ -222,7 +222,6 @@ def render_timer_page():
                     st.session_state['timer_start'] = datetime.now()
                     st.session_state['timer_task_id'] = selected_task_id
                     st.session_state['timer_subtask_id'] = selected_subtask_id
-                    st.rerun()
 
         with col_pause:
             if st.session_state['timer_running']:
@@ -230,20 +229,19 @@ def render_timer_page():
                     st.session_state['timer_running'] = False
                     st.session_state['timer_paused_elapsed'] = elapsed
                     st.session_state['timer_start'] = None
-                    st.rerun()
 
         with col_stop:
             if elapsed > 0:
                 if st.button("⏹ Stop & Save", use_container_width=True, type="primary"):
-                    # Save the time log
-                    minutes_spent = max(1, elapsed / 60)
+                    # Save the time log with exact duration
+                    minutes_spent = elapsed / 60
                     task_id = st.session_state.get('timer_task_id', selected_task_id)
                     subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
 
                     db.add_time_log(
                         user_id=user_id,
                         task_id=task_id,
-                        duration_minutes=round(minutes_spent, 1),
+                        duration_minutes=round(minutes_spent, 2),  # 2 decimal places = 1-second precision
                         log_date=date.today().isoformat(),
                         note=f"Timer session",
                         source="timer",
@@ -256,7 +254,17 @@ def render_timer_page():
                     st.session_state['timer_paused_elapsed'] = 0
                     st.session_state['timer_elapsed'] = 0
 
-                    st.success(f"✅ Saved {int(minutes_spent)} min!")
+                    # Show exact time saved
+                    hours = int(elapsed // 3600)
+                    mins = int((elapsed % 3600) // 60)
+                    secs = int(elapsed % 60)
+                    if hours > 0:
+                        time_str = f"{hours}h {mins}m {secs}s"
+                    elif mins > 0:
+                        time_str = f"{mins}m {secs}s"
+                    else:
+                        time_str = f"{secs}s"
+                    st.success(f"✅ Saved {time_str}!")
                     st.rerun()
 
         # Reset button
@@ -264,7 +272,6 @@ def render_timer_page():
             if st.button("🔄 Reset", use_container_width=True):
                 st.session_state['timer_paused_elapsed'] = 0
                 st.session_state['timer_elapsed'] = 0
-                st.rerun()
 
     # No auto-refresh needed - JavaScript timer handles live display
 
