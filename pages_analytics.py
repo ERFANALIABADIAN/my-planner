@@ -11,11 +11,26 @@ import database as db
 
 
 def format_minutes(minutes: float) -> str:
-    if minutes < 60:
-        return f"{int(minutes)}m"
-    hours = int(minutes // 60)
-    mins = int(minutes % 60)
-    return f"{hours}h {mins}m" if mins else f"{hours}h"
+    """Format minutes to a human-readable string with hours, minutes, and seconds."""
+    total_seconds = int(minutes * 60)
+    hours = total_seconds // 3600
+    mins = (total_seconds % 3600) // 60
+    secs = total_seconds % 60
+    
+    if hours > 0:
+        if secs > 0:
+            return f"{hours}h {mins}m {secs}s"
+        elif mins > 0:
+            return f"{hours}h {mins}m"
+        else:
+            return f"{hours}h"
+    elif mins > 0:
+        if secs > 0:
+            return f"{mins}m {secs}s"
+        else:
+            return f"{mins}m"
+    else:
+        return f"{secs}s"
 
 
 def render_analytics_page():

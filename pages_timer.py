@@ -222,19 +222,34 @@ def render_timer_page():
                     st.session_state['timer_start'] = datetime.now()
                     st.session_state['timer_task_id'] = selected_task_id
                     st.session_state['timer_subtask_id'] = selected_subtask_id
+                    st.rerun()  # Immediate refresh to show running timer
 
         with col_pause:
             if st.session_state['timer_running']:
                 if st.button("⏸ Pause", use_container_width=True):
+                    # Recalculate elapsed at pause moment for accuracy
+                    if st.session_state['timer_start']:
+                        current_elapsed = st.session_state['timer_paused_elapsed'] + \
+                                        (datetime.now() - st.session_state['timer_start']).total_seconds()
+                    else:
+                        current_elapsed = st.session_state.get('timer_paused_elapsed', 0)
                     st.session_state['timer_running'] = False
-                    st.session_state['timer_paused_elapsed'] = elapsed
+                    st.session_state['timer_paused_elapsed'] = current_elapsed
                     st.session_state['timer_start'] = None
+                    st.rerun()
 
         with col_stop:
             if elapsed > 0:
                 if st.button("⏹ Stop & Save", use_container_width=True, type="primary"):
+                    # CRITICAL: Recalculate elapsed time RIGHT NOW for accuracy
+                    if st.session_state['timer_running'] and st.session_state['timer_start']:
+                        final_elapsed = st.session_state['timer_paused_elapsed'] + \
+                                       (datetime.now() - st.session_state['timer_start']).total_seconds()
+                    else:
+                        final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
+                    
                     # Save the time log with exact duration
-                    minutes_spent = elapsed / 60
+                    minutes_spent = final_elapsed / 60
                     task_id = st.session_state.get('timer_task_id', selected_task_id)
                     subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
 
@@ -255,9 +270,9 @@ def render_timer_page():
                     st.session_state['timer_elapsed'] = 0
 
                     # Show exact time saved
-                    hours = int(elapsed // 3600)
-                    mins = int((elapsed % 3600) // 60)
-                    secs = int(elapsed % 60)
+                    hours = int(final_elapsed // 3600)
+                    mins = int((final_elapsed % 3600) // 60)
+                    secs = int(final_elapsed % 60)
                     if hours > 0:
                         time_str = f"{hours}h {mins}m {secs}s"
                     elif mins > 0:
@@ -272,6 +287,7 @@ def render_timer_page():
             if st.button("🔄 Reset", use_container_width=True):
                 st.session_state['timer_paused_elapsed'] = 0
                 st.session_state['timer_elapsed'] = 0
+                st.rerun()
 
     # No auto-refresh needed - JavaScript timer handles live display
 
@@ -297,7 +313,18 @@ def render_timer_page():
                     st.caption(log['note'])
             with col_dur:
                 source_icon = "⏱" if log['source'] == 'timer' else "✏️"
-                st.markdown(f"{source_icon} **{int(log['duration_minutes'])} min**")
+                # Display minutes and seconds for accurate time display
+                total_seconds = int(log['duration_minutes'] * 60)
+                hours = total_seconds // 3600
+                mins = (total_seconds % 3600) // 60
+                secs = total_seconds % 60
+                if hours > 0:
+                    time_display = f"{hours}h {mins}m {secs}s"
+                elif mins > 0:
+                    time_display = f"{mins}m {secs}s"
+                else:
+                    time_display = f"{secs}s"
+                st.markdown(f"{source_icon} **{time_display}**")
             with col_del:
                 if st.button("✕", key=f"del_log_{log['id']}"):
                     db.delete_time_log(log['id'])
