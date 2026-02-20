@@ -32,17 +32,24 @@ st.markdown("""
     /* Hide Streamlit branding but keep sidebar toggle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {
-        visibility: hidden !important;
+    header[data-testid="stHeader"] {
+        background: transparent !important;
         height: 0 !important;
         min-height: 0 !important;
         padding: 0 !important;
         margin: 0 !important;
+        overflow: visible !important;
     }
-    /* ALWAYS show sidebar collapse/expand button */
-    [data-testid="collapsedControl"] {
+    /* Hide all header content except the sidebar toggle button */
+    header[data-testid="stHeader"] > *:not([data-testid="collapsedControl"]) {
+        display: none !important;
+    }
+    /* ALWAYS show sidebar collapse/expand button - all possible testids */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {
         visibility: visible !important;
         display: flex !important;
+        opacity: 1 !important;
         position: fixed !important;
         top: 0.5rem !important;
         left: 0.5rem !important;
@@ -51,6 +58,7 @@ st.markdown("""
         border-radius: 8px !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
         padding: 0.3rem !important;
+        pointer-events: all !important;
     }
 
     /* Sidebar styling */
