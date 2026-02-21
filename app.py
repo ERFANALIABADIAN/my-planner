@@ -33,6 +33,20 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
+    /* Improve sidebar toggle button size and appearance */
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="collapsedControl"] svg {
+        width: 1.5rem !important;
+        height: 1.5rem !important;
+        color: #4B5563 !important;
+        transition: all 0.2s ease;
+    }
+    [data-testid="stSidebarCollapseButton"]:hover svg,
+    [data-testid="collapsedControl"]:hover svg {
+        color: #2563EB !important;
+        transform: scale(1.1);
+    }
+
     /* Sidebar styling */
     section[data-testid="stSidebar"] {
         background-color: #F8F9FA !important;
