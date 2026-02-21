@@ -37,15 +37,21 @@ st.markdown("""
         background: transparent !important;
         height: auto !important;
     }
-    
-    /* Hide header content except sidebar toggle */
-    header[data-testid="stHeader"] > div:not([data-testid="collapsedControl"]) {
+
+    /* Hide Streamlit decoration/toolbar, but DO NOT hide the sidebar toggle */
+    [data-testid="stDecoration"],
+    [data-testid="stToolbar"] {
         display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
     }
-    
-    /* Style sidebar collapse/expand button - always visible and accessible */
+
+    /* Sidebar collapse/expand toggle: handle multiple Streamlit versions */
     [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"] {
+    [data-testid="stSidebarCollapsedControl"],
+    header[data-testid="stHeader"] button[aria-label*="sidebar" i],
+    button[aria-label*="Open sidebar" i],
+    button[aria-label*="Close sidebar" i] {
         visibility: visible !important;
         display: flex !important;
         opacity: 1 !important;
@@ -60,26 +66,26 @@ st.markdown("""
         padding: 0.5rem !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
+        pointer-events: all !important;
+        touch-action: manipulation !important;
     }
     
     [data-testid="collapsedControl"]:hover,
-    [data-testid="stSidebarCollapsedControl"]:hover {
+    [data-testid="stSidebarCollapsedControl"]:hover,
+    header[data-testid="stHeader"] button[aria-label*="sidebar" i]:hover,
+    button[aria-label*="Open sidebar" i]:hover,
+    button[aria-label*="Close sidebar" i]:hover {
         background: #F3F4F6 !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         transform: scale(1.05) !important;
     }
-    
-    /* When sidebar is collapsed, button stays in top-left */
-    [data-testid="stSidebarCollapsedControl"] {
-        left: 0.5rem !important;
-    }
-    
-    /* When sidebar is open, button is inside sidebar */
+
+    /* Always keep toggle in top-left (don’t move it into the sidebar) */
     section[data-testid="stSidebar"] [data-testid="collapsedControl"] {
-        position: absolute !important;
+        position: fixed !important;
         top: 0.5rem !important;
-        left: auto !important;
-        right: 0.5rem !important;
+        left: 0.5rem !important;
+        right: auto !important;
     }
 
     /* Sidebar styling */
