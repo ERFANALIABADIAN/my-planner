@@ -243,7 +243,7 @@ def render_timer_page():
                         final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
                         do_save = True
                 with col_reset:
-                    if st.button("🔄 Reset", use_container_width=True, type="tertiary"):
+                    if st.button("Reset", use_container_width=True):
                         st.session_state['timer_paused_elapsed'] = 0
                         st.session_state['timer_elapsed'] = 0
                         st.rerun()
