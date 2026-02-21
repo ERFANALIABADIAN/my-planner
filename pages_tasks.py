@@ -173,7 +173,7 @@ def render_tasks_page():
                     if st.button("📝", key=f"edit_{task['id']}", help="Edit"):
                         st.session_state[f'editing_task_{task["id"]}'] = True
                 with col_a3:
-                        if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
+                    if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
                         db.delete_task(task['id'])
                         st.rerun()
 
