@@ -18,17 +18,9 @@ def format_minutes(minutes: float) -> str:
     secs = total_seconds % 60
     
     if hours > 0:
-        if secs > 0:
-            return f"{hours}h {mins}m {secs}s"
-        elif mins > 0:
-            return f"{hours}h {mins}m"
-        else:
-            return f"{hours}h"
+        return f"{hours}h {mins}m {secs}s"
     elif mins > 0:
-        if secs > 0:
-            return f"{mins}m {secs}s"
-        else:
-            return f"{mins}m"
+        return f"{mins}m {secs}s"
     else:
         return f"{secs}s"
 

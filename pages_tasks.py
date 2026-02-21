@@ -15,17 +15,9 @@ def format_minutes(minutes: float) -> str:
     secs = total_seconds % 60
     
     if hours > 0:
-        if secs > 0:
-            return f"{hours}h {mins}m {secs}s"
-        elif mins > 0:
-            return f"{hours}h {mins}m"
-        else:
-            return f"{hours}h"
+        return f"{hours}h {mins}m {secs}s"
     elif mins > 0:
-        if secs > 0:
-            return f"{mins}m {secs}s"
-        else:
-            return f"{mins}m"
+        return f"{mins}m {secs}s"
     else:
         return f"{secs}s"
 
@@ -60,11 +52,11 @@ def render_tasks_page():
         # Category list with delete option
         if categories:
             for cat in categories:
-                col_cat, col_del = st.columns([5, 1])
+                col_cat, col_del = st.columns([0.85, 0.15])
                 with col_cat:
                     st.markdown(f"{cat['icon']} **{cat['name']}**")
                 with col_del:
-                    if st.button("🗑", key=f"del_cat_{cat['id']}", help="Delete category"):
+                    if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete category", type="tertiary"):
                         db.delete_category(cat['id'])
                         st.rerun()
         else:

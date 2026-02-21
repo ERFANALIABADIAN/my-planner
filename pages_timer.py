@@ -196,6 +196,16 @@ def render_timer_page():
 
         elapsed = int(elapsed)
 
+        col_header, col_reset = st.columns([4, 1])
+        with col_header:
+            st.markdown("### 🕐 Timer")
+        with col_reset:
+            if elapsed > 0 and not st.session_state['timer_running']:
+                if st.button("🔄", key="reset_timer", help="Reset Timer", type="tertiary"):
+                    st.session_state['timer_paused_elapsed'] = 0
+                    st.session_state['timer_elapsed'] = 0
+                    st.rerun()
+
         # Display timer using JavaScript component (smooth, no lag)
         if "🍅" in timer_mode:
             total_seconds = st.session_state.get('pomodoro_minutes', 25) * 60
@@ -213,19 +223,36 @@ def render_timer_page():
             )
 
         # Timer Controls
-        col_start, col_pause, col_stop = st.columns(3)
+        do_save = False
+        final_elapsed = 0
 
-        with col_start:
-            if not st.session_state['timer_running']:
-                if st.button("▶ Start", use_container_width=True, type="primary"):
-                    st.session_state['timer_running'] = True
-                    st.session_state['timer_start'] = datetime.now()
-                    st.session_state['timer_task_id'] = selected_task_id
-                    st.session_state['timer_subtask_id'] = selected_subtask_id
-                    st.rerun()  # Immediate refresh to show running timer
-
-        with col_pause:
-            if st.session_state['timer_running']:
+        if not st.session_state['timer_running']:
+            if elapsed == 0:
+                # State 1: Not started
+                _, col_center, _ = st.columns([1, 2, 1])
+                with col_center:
+                    if st.button("▶ Start", use_container_width=True, type="primary"):
+                        st.session_state['timer_running'] = True
+                        st.session_state['timer_start'] = datetime.now()
+                        st.session_state['timer_task_id'] = selected_task_id
+                        st.session_state['timer_subtask_id'] = selected_subtask_id
+                        st.rerun()  # Immediate refresh to show running timer
+            else:
+                # State 3: Paused
+                col_resume, col_stop = st.columns(2)
+                with col_resume:
+                    if st.button("▶ Resume", use_container_width=True, type="primary"):
+                        st.session_state['timer_running'] = True
+                        st.session_state['timer_start'] = datetime.now()
+                        st.rerun()
+                with col_stop:
+                    if st.button("⏹ Stop & Save", use_container_width=True):
+                        final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
+                        do_save = True
+        else:
+            # State 2: Running
+            col_pause, col_stop = st.columns(2)
+            with col_pause:
                 if st.button("⏸ Pause", use_container_width=True):
                     # Recalculate elapsed at pause moment for accuracy
                     if st.session_state['timer_start']:
@@ -237,57 +264,50 @@ def render_timer_page():
                     st.session_state['timer_paused_elapsed'] = current_elapsed
                     st.session_state['timer_start'] = None
                     st.rerun()
-
-        with col_stop:
-            if elapsed > 0:
+            with col_stop:
                 if st.button("⏹ Stop & Save", use_container_width=True, type="primary"):
                     # CRITICAL: Recalculate elapsed time RIGHT NOW for accuracy
-                    if st.session_state['timer_running'] and st.session_state['timer_start']:
+                    if st.session_state['timer_start']:
                         final_elapsed = st.session_state['timer_paused_elapsed'] + \
                                        (datetime.now() - st.session_state['timer_start']).total_seconds()
                     else:
                         final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
-                    
-                    # Save the time log with exact duration
-                    minutes_spent = final_elapsed / 60
-                    task_id = st.session_state.get('timer_task_id', selected_task_id)
-                    subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
+                    do_save = True
 
-                    db.add_time_log(
-                        user_id=user_id,
-                        task_id=task_id,
-                        duration_minutes=round(minutes_spent, 2),  # 2 decimal places = 1-second precision
-                        log_date=date.today().isoformat(),
-                        note=f"Timer session",
-                        source="timer",
-                        subtask_id=subtask_id
-                    )
+        if do_save:
+            # Save the time log with exact duration
+            minutes_spent = final_elapsed / 60
+            task_id = st.session_state.get('timer_task_id', selected_task_id)
+            subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
 
-                    # Reset timer
-                    st.session_state['timer_running'] = False
-                    st.session_state['timer_start'] = None
-                    st.session_state['timer_paused_elapsed'] = 0
-                    st.session_state['timer_elapsed'] = 0
+            db.add_time_log(
+                user_id=user_id,
+                task_id=task_id,
+                duration_minutes=round(minutes_spent, 2),  # 2 decimal places = 1-second precision
+                log_date=date.today().isoformat(),
+                note=f"Timer session",
+                source="timer",
+                subtask_id=subtask_id
+            )
 
-                    # Show exact time saved
-                    hours = int(final_elapsed // 3600)
-                    mins = int((final_elapsed % 3600) // 60)
-                    secs = int(final_elapsed % 60)
-                    if hours > 0:
-                        time_str = f"{hours}h {mins}m {secs}s"
-                    elif mins > 0:
-                        time_str = f"{mins}m {secs}s"
-                    else:
-                        time_str = f"{secs}s"
-                    st.success(f"✅ Saved {time_str}!")
-                    st.rerun()
+            # Reset timer
+            st.session_state['timer_running'] = False
+            st.session_state['timer_start'] = None
+            st.session_state['timer_paused_elapsed'] = 0
+            st.session_state['timer_elapsed'] = 0
 
-        # Reset button
-        if elapsed > 0 and not st.session_state['timer_running']:
-            if st.button("🔄 Reset", use_container_width=True):
-                st.session_state['timer_paused_elapsed'] = 0
-                st.session_state['timer_elapsed'] = 0
-                st.rerun()
+            # Show exact time saved
+            hours = int(final_elapsed // 3600)
+            mins = int((final_elapsed % 3600) // 60)
+            secs = int(final_elapsed % 60)
+            if hours > 0:
+                time_str = f"{hours}h {mins}m {secs}s"
+            elif mins > 0:
+                time_str = f"{mins}m {secs}s"
+            else:
+                time_str = f"{secs}s"
+            st.success(f"✅ Saved {time_str}!")
+            st.rerun()
 
     # No auto-refresh needed - JavaScript timer handles live display
 
@@ -298,8 +318,20 @@ def render_timer_page():
     today_logs = db.get_time_logs(user_id, start_date=date.today().isoformat(),
                                   end_date=date.today().isoformat())
     if today_logs:
-        total_today = sum(log['duration_minutes'] for log in today_logs)
-        st.metric("Total Today", f"{int(total_today // 60)}h {int(total_today % 60)}m")
+        total_today_minutes = sum(log['duration_minutes'] for log in today_logs)
+        total_seconds = int(total_today_minutes * 60)
+        hours = total_seconds // 3600
+        mins = (total_seconds % 3600) // 60
+        secs = total_seconds % 60
+        
+        if hours > 0:
+            total_str = f"{hours}h {mins}m {secs}s"
+        elif mins > 0:
+            total_str = f"{mins}m {secs}s"
+        else:
+            total_str = f"{secs}s"
+            
+        st.metric("Total Today", total_str)
 
         for log in today_logs:
             col_info, col_dur, col_del = st.columns([5, 2, 1])
@@ -326,7 +358,7 @@ def render_timer_page():
                     time_display = f"{secs}s"
                 st.markdown(f"{source_icon} **{time_display}**")
             with col_del:
-                if st.button("✕", key=f"del_log_{log['id']}"):
+                if st.button("🗑️", key=f"del_log_{log['id']}", help="Delete session", type="tertiary"):
                     db.delete_time_log(log['id'])
                     st.rerun()
     else:
