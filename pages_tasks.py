@@ -173,7 +173,7 @@ def render_tasks_page():
                     if st.button("📝", key=f"edit_{task['id']}", help="Edit"):
                         st.session_state[f'editing_task_{task["id"]}'] = True
                 with col_a3:
-                    if st.button("🗑", key=f"del_task_{task['id']}", help="Delete"):
+                        if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
                         db.delete_task(task['id'])
                         st.rerun()
 
@@ -219,7 +219,7 @@ def render_tasks_page():
                         style = "text-decoration: line-through; color: #9CA3AF;" if sub['is_done'] else ""
                         st.markdown(f"<span style='{style}'>{sub['title']}</span>", unsafe_allow_html=True)
                     with col_sub_del:
-                        if st.button("✕", key=f"del_sub_{sub['id']}"):
+                        if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete subtask", type="tertiary"):
                             db.delete_subtask(sub['id'])
                             st.rerun()
 
