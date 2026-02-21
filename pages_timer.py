@@ -175,8 +175,6 @@ def render_timer_page():
             st.session_state['pomodoro_minutes'] = pomodoro_min
 
     with col_timer:
-        st.markdown("### 🕐 Timer")
-        
         # Initialize timer state
         if 'timer_running' not in st.session_state:
             st.session_state['timer_running'] = False
@@ -196,15 +194,8 @@ def render_timer_page():
 
         elapsed = int(elapsed)
 
-        col_header, col_reset = st.columns([4, 1])
-        with col_header:
-            st.markdown("### 🕐 Timer")
-        with col_reset:
-            if elapsed > 0 and not st.session_state['timer_running']:
-                if st.button("🔄", key="reset_timer", help="Reset Timer", type="tertiary"):
-                    st.session_state['timer_paused_elapsed'] = 0
-                    st.session_state['timer_elapsed'] = 0
-                    st.rerun()
+        # Centered Header
+        st.markdown("<h3 style='text-align: center;'>🕐 Timer</h3>", unsafe_allow_html=True)
 
         # Display timer using JavaScript component (smooth, no lag)
         if "🍅" in timer_mode:
@@ -226,9 +217,11 @@ def render_timer_page():
         do_save = False
         final_elapsed = 0
 
+        st.write("") # Spacer
+
         if not st.session_state['timer_running']:
             if elapsed == 0:
-                # State 1: Not started
+                # State 1: Not started - Centered Start Button
                 _, col_center, _ = st.columns([1, 2, 1])
                 with col_center:
                     if st.button("▶ Start", use_container_width=True, type="primary"):
@@ -236,10 +229,10 @@ def render_timer_page():
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = selected_task_id
                         st.session_state['timer_subtask_id'] = selected_subtask_id
-                        st.rerun()  # Immediate refresh to show running timer
+                        st.rerun()
             else:
-                # State 3: Paused
-                col_resume, col_stop = st.columns(2)
+                # State 3: Paused - Resume | Stop | Reset
+                col_resume, col_stop, col_reset = st.columns(3)
                 with col_resume:
                     if st.button("▶ Resume", use_container_width=True, type="primary"):
                         st.session_state['timer_running'] = True
@@ -249,8 +242,13 @@ def render_timer_page():
                     if st.button("⏹ Stop & Save", use_container_width=True):
                         final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
                         do_save = True
+                with col_reset:
+                    if st.button("🔄 Reset", use_container_width=True, type="tertiary"):
+                        st.session_state['timer_paused_elapsed'] = 0
+                        st.session_state['timer_elapsed'] = 0
+                        st.rerun()
         else:
-            # State 2: Running
+            # State 2: Running - Pause | Stop
             col_pause, col_stop = st.columns(2)
             with col_pause:
                 if st.button("⏸ Pause", use_container_width=True):

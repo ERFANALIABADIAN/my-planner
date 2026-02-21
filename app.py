@@ -191,9 +191,10 @@ with st.sidebar:
         st.session_state['current_page'] = 'tasks'
 
     for label, page_key in nav_options.items():
-        btn_type = "primary" if st.session_state['current_page'] == page_key else "secondary"
+        btn_type = "primary" if st.session_state.get('current_page', 'tasks') == page_key else "secondary"
         if st.button(label, key=f"nav_{page_key}", use_container_width=True, type=btn_type):
             st.session_state['current_page'] = page_key
+            st.rerun()
 
     st.markdown("---")
 
