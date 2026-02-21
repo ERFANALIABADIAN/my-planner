@@ -29,49 +29,63 @@ st.markdown("""
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
 
-    /* Hide Streamlit branding */
+    /* Hide Streamlit branding but keep sidebar toggle */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header[data-testid="stHeader"] {
-        visibility: hidden !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        visibility: visible !important;
+        background: transparent !important;
+        height: auto !important;
     }
     
-    /* HIDE sidebar collapse/expand buttons completely - sidebar stays fixed */
-    [data-testid="collapsedControl"],
-    [data-testid="stSidebarCollapsedControl"],
-    button[kind="header"],
-    section[data-testid="stSidebar"] > div > button,
-    section[data-testid="stSidebar"] button[aria-label*="ollapse"],
-    section[data-testid="stSidebar"] button svg,
-    [data-testid="baseButton-header"] {
+    /* Hide header content except sidebar toggle */
+    header[data-testid="stHeader"] > div:not([data-testid="collapsedControl"]) {
         display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        opacity: 0 !important;
-        width: 0 !important;
-        height: 0 !important;
     }
     
-    /* Force sidebar to always stay open and prevent collapse */
+    /* Style sidebar collapse/expand button - always visible and accessible */
+    [data-testid="collapsedControl"],
+    [data-testid="stSidebarCollapsedControl"] {
+        visibility: visible !important;
+        display: flex !important;
+        opacity: 1 !important;
+        position: fixed !important;
+        top: 0.5rem !important;
+        left: 0.5rem !important;
+        z-index: 999999 !important;
+        background: white !important;
+        border: 1px solid #E5E7EB !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        padding: 0.5rem !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    [data-testid="collapsedControl"]:hover,
+    [data-testid="stSidebarCollapsedControl"]:hover {
+        background: #F3F4F6 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        transform: scale(1.05) !important;
+    }
+    
+    /* When sidebar is collapsed, button stays in top-left */
+    [data-testid="stSidebarCollapsedControl"] {
+        left: 0.5rem !important;
+    }
+    
+    /* When sidebar is open, button is inside sidebar */
+    section[data-testid="stSidebar"] [data-testid="collapsedControl"] {
+        position: absolute !important;
+        top: 0.5rem !important;
+        left: auto !important;
+        right: 0.5rem !important;
+    }
+
+    /* Sidebar styling */
     section[data-testid="stSidebar"] {
-        position: relative !important;
-        transform: translateX(0) !important;
-        transition: none !important;
-        min-width: 21rem !important;
-        max-width: 21rem !important;
         background-color: #F8F9FA !important;
         border-right: 1px solid #E5E7EB !important;
-    }
-    section[data-testid="stSidebar"][aria-expanded="false"] {
-        transform: translateX(0) !important;
-        margin-left: 0 !important;
-    }
-    section[data-testid="stSidebar"] > div {
-        width: 21rem !important;
     }
     [data-testid="stSidebar"] .stMarkdown h3 {
         color: #374151;
