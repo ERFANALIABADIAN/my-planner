@@ -233,6 +233,18 @@ st.markdown(f"""
     }}
     /* Number input +/- buttons */
     .stNumberInput button {{ color: {_text} !important; background: {_input} !important; border-color: {_border} !important; }}
+    /* All form field labels (text input, number input, selectbox, etc.) */
+    .stTextInput label, .stTextArea label, .stNumberInput label,
+    .stSelectbox label, .stDateInput label, .stColorPicker label,
+    div[data-testid="stNumberInput"] label,
+    div[data-testid="stTextInput"] label,
+    div[data-testid="stSelectbox"] label,
+    div[data-testid="column"] label,
+    .stForm label,
+    label[data-testid="stWidgetLabel"] p,
+    label[data-testid="stWidgetLabel"] {{
+        color: {_text} !important;
+    }}
     /* Date input */
     .stDateInput > div > div > input {{
         background-color: {_input} !important; color: {_text} !important; border-color: {_border} !important;
