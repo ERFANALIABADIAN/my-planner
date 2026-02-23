@@ -122,6 +122,8 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
 
 
 def render_timer_page():
+    # Ensure Tasks page will reset its panels when user navigates back
+    st.session_state['_tasks_initialized'] = False
     user_id = st.session_state['user_id']
     categories = db.get_categories(user_id)
     tasks = db.get_tasks(user_id, status='active')

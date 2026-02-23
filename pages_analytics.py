@@ -26,6 +26,8 @@ def format_minutes(minutes: float) -> str:
 
 
 def render_analytics_page():
+    # Ensure Tasks page will reset its panels when user navigates back
+    st.session_state['_tasks_initialized'] = False
     user_id = st.session_state['user_id']
 
     st.markdown("## 📊 Analytics & Reports")

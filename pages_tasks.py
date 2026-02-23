@@ -442,6 +442,12 @@ def render_tasks_page():
     _done_bg   = "#0C2D21" if _dark else "#F0FFF4"
     _text_col  = "#E5E7EB" if _dark else "#374151"
     _muted_col = "#9CA3AF"
+    # If we're entering the Tasks page from another page, reset any open panels
+    if not st.session_state.get('_tasks_initialized', False):
+        for k in list(st.session_state.keys()):
+            if k.startswith('sub_open_') or k.startswith('log_open_') or k.startswith('new_sub_'):
+                st.session_state[k] = False
+        st.session_state['_tasks_initialized'] = True
     
     # Fix dark mode styles for expanders inside tasks
     st.markdown(f"""
