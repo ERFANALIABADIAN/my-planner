@@ -498,9 +498,10 @@ def render_tasks_page():
 
         # Category list – click to filter, trash to delete
         if categories:
-            # use filter_cat_id directly since it is the source of truth for both sidebar and main select
+            # Always sync filter_id to match main_cat_filter (selectbox) for highlight
             cat_options = {f"{c['icon']} {c['name']}": c['id'] for c in categories}
-            filter_id = st.session_state.get('filter_cat_id', None)
+            main_cat = st.session_state.get('main_cat_filter', "All Categories")
+            filter_id = cat_options.get(main_cat, None) if main_cat != "All Categories" else None
             for cat in categories:
                 col_cat, col_del = st.columns([0.85, 0.15])
                 with col_cat:
@@ -519,8 +520,6 @@ def render_tasks_page():
                         else:
                             st.session_state['filter_cat_id'] = cat['id']
                             st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
-                        # immediately rerun so highlight updates
-                        st.experimental_rerun()
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])

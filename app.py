@@ -467,6 +467,3 @@ with st.sidebar:
         if st.button("🚪 Logout", use_container_width=True, type="secondary"):
             logout_user()
             st.rerun()
-
-# Ensure sidebar highlight updates immediately on click
-
