@@ -4,7 +4,7 @@ Run with: streamlit run app.py
 """
 
 import streamlit as st
-from database import init_db
+from database import init_db, update_user_theme
 from auth import is_authenticated, render_login_page, logout_user
 from pages_tasks import render_tasks_page
 from pages_timer import render_timer_page
@@ -416,7 +416,10 @@ with st.sidebar:
     # ── Dark / Light toggle
     _toggle_label = "☀️ Light Mode" if _dark else "🌙 Dark Mode"
     if st.button(_toggle_label, use_container_width=True, type="secondary", key="theme_toggle"):
-        st.session_state['theme'] = 'light' if _dark else 'dark'
+        new_theme = 'light' if _dark else 'dark'
+        st.session_state['theme'] = new_theme
+        if is_authenticated():
+            update_user_theme(st.session_state['user_id'], new_theme)
         st.rerun()
 
     st.markdown("---")

@@ -18,7 +18,7 @@ ICONS = [
 
 
 def _subtask_toggle_cb(sub_id: int, task_id: int):
-    """Callback executed when a subtask checkbox changes. Closes the subtask window."""
+    """Callback executed when a subtask checkbox changes. Updates DB without closing."""
     db.toggle_subtask(sub_id)
     # Invalidate caches
     try:
@@ -28,8 +28,8 @@ def _subtask_toggle_cb(sub_id: int, task_id: int):
     except Exception:
         pass
     
-    # Auto-close subtask window as requested
-    st.session_state[f'sub_open_{task_id}'] = False
+    # Do NOT auto-close subtask window (User requested to keep it open)
+    # st.session_state[f'sub_open_{task_id}'] = False  <-- Removed
 
 
 
@@ -208,6 +208,8 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task_title}'", icon="⏱")
                     st.session_state[_log_key] = False  # auto-close
                     # Natural rerun will re-render fragment with updated data
+                    st.rerun() # Restore rerun to ensure close/update logic applies immediately
+
         
 
 @st.fragment

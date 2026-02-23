@@ -199,6 +199,7 @@ SCHEMA_SQL = """
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         display_name TEXT,
+        theme TEXT DEFAULT 'light',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS categories (
@@ -288,6 +289,11 @@ SCHEMA_SQL = """
 def init_db():
     if USE_TURSO:
         _turso_executescript(SCHEMA_SQL)
+        # Migration: add theme column if missing
+        try:
+            _turso_execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT 'light'", [], "none")
+        except Exception:
+            pass
         # Migration: add goal_minutes if missing
         try:
             _turso_execute("ALTER TABLE tasks ADD COLUMN goal_minutes REAL DEFAULT 0", [], "none")
@@ -296,6 +302,11 @@ def init_db():
     else:
         with get_connection() as conn:
             conn.executescript(SCHEMA_SQL)
+            # Migration: add theme column
+            try:
+                conn.execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT 'light'")
+            except Exception:
+                pass
             # Migration: add goal_minutes column for existing databases
             try:
                 conn.execute("ALTER TABLE tasks ADD COLUMN goal_minutes REAL DEFAULT 0")
@@ -334,6 +345,14 @@ def create_user(username: str, password_hash: str, display_name: str = None) -> 
         "INSERT INTO users (username, password_hash, display_name) VALUES (?, ?, ?)",
         [username, password_hash, display_name or username], fetch="lastrowid"
     )
+
+def update_user_theme(user_id: int, theme: str):
+    """Update user theme preference."""
+    if USE_TURSO:
+        _turso_execute("UPDATE users SET theme = ? WHERE id = ?", [theme, user_id])
+    else:
+        with get_connection() as conn:
+            conn.execute("UPDATE users SET theme = ? WHERE id = ?", (theme, user_id))
 
 
 def get_user_by_username(username: str):

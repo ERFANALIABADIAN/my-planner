@@ -27,6 +27,7 @@ def login_user(username: str, password: str) -> bool:
         st.session_state['user_id'] = user['id']
         st.session_state['username'] = user['username']
         st.session_state['display_name'] = user['display_name']
+        st.session_state['theme'] = user.get('theme', 'light') or 'light'
         # Persist session: store token in DB and add to URL so refresh works
         try:
             token = _db.create_session_token(user['id'])
