@@ -85,9 +85,13 @@ def render_tasks_page():
             picked = st.session_state.get('new_cat_icon', '📁')
 
             with col_icon:
-                # Use caption instead of markdown for label to match size
-                st.caption("Icon")
-                # Popover is just the button here - no use_container_width so it stays square
+                # Use same label style as "Name" and "Color" widgets
+                st.markdown(
+                    f"<p style='font-size:0.875rem; color:{_text_col}; "
+                    f"font-weight:400; margin-bottom:4px; line-height:1.4;'>Icon</p>",
+                    unsafe_allow_html=True
+                )
+                # Popover button - no use_container_width so it stays square
                 popover = st.popover(picked)
                 with popover:
                     st.markdown("### Choose Icon")

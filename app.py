@@ -298,14 +298,15 @@ st.markdown(f"""
         color: {_muted} !important;
     }}
     
-    /* Popover & Icon Picker Fixes - ULTIMATE DARK MODE FIX */
-    /* 1. The trigger button (showing current icon) - square, no arrow, dark bg */
-    [data-testid="stPopover"] > button {{
+    /* ── Icon Picker Popover Button ───────────────────────────────────── */
+    /* Target both global and sidebar contexts, all override levels */
+    [data-testid="stPopover"] button,
+    [data-testid="stSidebar"] [data-testid="stPopover"] button,
+    [data-testid="stPopover"] button[kind="secondary"] {{
         background-color: {_input} !important;
         color: {_text} !important;
         border: 1px solid {_border} !important;
         border-radius: 8px !important;
-        /* Make it square */
         width: 2.8rem !important;
         min-width: 2.8rem !important;
         max-width: 2.8rem !important;
@@ -315,20 +316,26 @@ st.markdown(f"""
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        font-size: 1.3rem !important;
+        font-size: 1.4rem !important;
+        overflow: hidden !important;
         gap: 0 !important;
     }}
-    /* Hide the dropdown chevron arrow inside popover button */
-    [data-testid="stPopover"] > button svg,
-    [data-testid="stPopover"] > button [data-testid="baseButton-icon"] {{
+    /* Completely kill the chevron arrow SVG */
+    [data-testid="stPopover"] button svg,
+    [data-testid="stSidebar"] [data-testid="stPopover"] button svg {{
         display: none !important;
+        visibility: hidden !important;
         width: 0 !important;
         height: 0 !important;
+        position: absolute !important;
+        overflow: hidden !important;
     }}
-    /* Hover state for trigger button */
-    [data-testid="stPopover"] > button:hover {{
+    /* Hover */
+    [data-testid="stPopover"] button:hover,
+    [data-testid="stSidebar"] [data-testid="stPopover"] button:hover {{
         border-color: {_accent} !important;
         box-shadow: 0 0 0 2px {_accent}33 !important;
+        background-color: {_input} !important;
     }}
 
     /* 2. The popover container (content window) - multiple layers needed */
