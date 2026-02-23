@@ -8,6 +8,14 @@ import streamlit.components.v1 as components
 from datetime import datetime, date
 import database as db
 
+# Keep the session alive every 3 minutes when the timer is running.
+# streamlit-autorefresh is already in requirements.txt.
+try:
+    from streamlit_autorefresh import st_autorefresh
+    _HAS_AUTOREFRESH = True
+except ImportError:
+    _HAS_AUTOREFRESH = False
+
 
 def format_seconds(seconds: int) -> str:
     """Format seconds into MM:SS or HH:MM:SS."""
@@ -20,7 +28,14 @@ def format_seconds(seconds: int) -> str:
 
 
 def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stopwatch", total_seconds: int = 0):
-    """Render a JavaScript-based live timer that counts without page refresh."""
+    """Render a JavaScript-based live timer that counts without page refresh.
+    Also embeds a silent keepalive fetch so the Streamlit session never idles out."""
+    keepalive_js = """
+        // Keepalive: ping the health endpoint every 90s to prevent session timeout
+        setInterval(function() {
+            try { fetch('/_stcore/health', {cache:'no-store'}); } catch(e) {}
+        }, 90000);
+    """ if is_running else ""
     timer_html = f"""
     <div id="timer-container" style="text-align:center; padding:1.5rem 0;">
         <div id="timer-display" style="font-size:4rem; font-weight:800; color:#1E1E2E;
@@ -85,6 +100,7 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
             if (isRunning) {{
                 setInterval(update, 200);
             }}
+            {keepalive_js}
         }})();
     </script>
     <style>
@@ -184,6 +200,12 @@ def render_timer_page():
             st.session_state['timer_elapsed'] = 0
         if 'timer_paused_elapsed' not in st.session_state:
             st.session_state['timer_paused_elapsed'] = 0
+
+        # ── Session keepalive: auto-refresh every 3 min ONLY when timer is running ──
+        # Prevents Streamlit Cloud from killing the WebSocket connection (session wipe).
+        # timer_start stays in session_state so elapsed is always recomputed correctly.
+        if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
+            st_autorefresh(interval=180_000, key="timer_keepalive")
 
         # Calculate elapsed time
         if st.session_state['timer_running'] and st.session_state['timer_start']:

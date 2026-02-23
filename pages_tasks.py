@@ -6,6 +6,27 @@ import streamlit as st
 from datetime import date
 import database as db
 
+# ─── Icon picker options ────────────────────────────────────────────
+ICONS = [
+    "📁", "📂", "📋", "📌", "📍", "🗂", "🖥", "💻", "📱",
+    "📚", "📖", "📧", "📦", "💰", "💳", "🏆", "🎯",
+    "🚀", "⚡", "🔥", "💡", "⭐", "🌟", "🌱", "🎨",
+    "🎵", "🎸", "🥋", "🏃", "💪", "🧠", "🔬",
+    "🌍", "🏠", "🏫", "🏥", "🏭", "🔑", "🔧",
+    "📊", "📈", "📉", "🤝", "👀", "✅", "📏",
+]
+
+
+def _subtask_toggle_cb(sub_id: int):
+    """Callback executed when a subtask checkbox changes. No rerun needed."""
+    db.toggle_subtask(sub_id)
+    # Invalidate the subtask cache so the updated count is reflected
+    try:
+        db.get_subtasks.clear()
+    except Exception:
+        pass
+
+
 
 def format_minutes(minutes: float) -> str:
     """Format minutes to a human-readable string with hours, minutes, and seconds."""
@@ -31,33 +52,58 @@ def render_tasks_page():
         st.markdown("### 📁 Categories")
 
         with st.expander("➕ New Category", expanded=False):
-            with st.form("new_cat_form", clear_on_submit=True):
-                cat_name = st.text_input("Name", placeholder="e.g. Programming")
-                col_icon, col_color = st.columns(2)
-                with col_icon:
-                    cat_icon = st.text_input("Icon", value="📁", max_chars=2)
-                with col_color:
-                    cat_color = st.color_picker("Color", value="#4A90D9")
-                if st.form_submit_button("Create", use_container_width=True, type="primary"):
-                    if cat_name.strip():
-                        try:
-                            db.create_category(user_id, cat_name.strip(), cat_color, cat_icon)
-                            st.success(f"Created: {cat_icon} {cat_name}")
-                            st.rerun()
-                        except Exception:
-                            st.error("Category already exists!")
-                    else:
-                        st.warning("Enter a name.")
+            cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
 
-        # Category list with delete option
+            # Icon picker
+            st.markdown("**Icon** – click to select:")
+            picked = st.session_state.get('new_cat_icon', '📁')
+            icon_cols = st.columns(9)
+            for idx, ico in enumerate(ICONS):
+                with icon_cols[idx % 9]:
+                    btn_type = "primary" if ico == picked else "secondary"
+                    if st.button(ico, key=f"ico_{idx}", type=btn_type):
+                        st.session_state['new_cat_icon'] = ico
+                        st.rerun()
+
+            cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
+            if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
+                if cat_name.strip():
+                    try:
+                        db.create_category(user_id, cat_name.strip(), cat_color, picked)
+                        st.success(f"Created: {picked} {cat_name}")
+                        st.session_state.pop('new_cat_name', None)
+                        st.session_state['new_cat_icon'] = '📁'
+                        st.rerun()
+                    except Exception:
+                        st.error("Category already exists!")
+                else:
+                    st.warning("Enter a name.")
+
+        # Category list – click to filter, trash to delete
         if categories:
+            filter_id = st.session_state.get('filter_cat_id', None)
             for cat in categories:
                 col_cat, col_del = st.columns([0.85, 0.15])
                 with col_cat:
-                    st.markdown(f"{cat['icon']} **{cat['name']}**")
+                    is_active = filter_id == cat['id']
+                    btn_style = "primary" if is_active else "secondary"
+                    if st.button(
+                        f"{cat['icon']} {cat['name']}",
+                        key=f"sidebar_cat_{cat['id']}",
+                        use_container_width=True,
+                        type=btn_style
+                    ):
+                        # Toggle filter: click same category again to deselect
+                        if is_active:
+                            st.session_state.pop('filter_cat_id', None)
+                        else:
+                            st.session_state['filter_cat_id'] = cat['id']
+                        st.rerun()
                 with col_del:
-                    if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete category", type="tertiary"):
+                    if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])
+                        if st.session_state.get('filter_cat_id') == cat['id']:
+                            st.session_state.pop('filter_cat_id', None)
                         st.rerun()
         else:
             st.info("No categories yet. Create one above!")
@@ -69,18 +115,33 @@ def render_tasks_page():
         st.info("👈 Start by creating a category in the sidebar.")
         return
 
-    # Filter bar
+    # ─ Filter bar (synced with sidebar category selection) ─
+    # Sync sidebar selection => dropdown
+    sidebar_cat_id = st.session_state.get('filter_cat_id', None)
+
     col_filter, col_status = st.columns([3, 2])
     with col_filter:
         cat_options = {"All Categories": None}
         for c in categories:
             cat_options[f"{c['icon']} {c['name']}"] = c['id']
+        # Find the default index based on sidebar selection
+        keys_list = list(cat_options.keys())
+        vals_list = list(cat_options.values())
+        default_idx = vals_list.index(sidebar_cat_id) if sidebar_cat_id in vals_list else 0
         selected_cat_name = st.selectbox(
             "Filter by Category",
-            options=list(cat_options.keys()),
-            label_visibility="collapsed"
+            options=keys_list,
+            index=default_idx,
+            label_visibility="collapsed",
+            key="main_cat_filter"
         )
         selected_cat_id = cat_options[selected_cat_name]
+        # Keep sidebar in sync when dropdown changes
+        if selected_cat_id != sidebar_cat_id:
+            if selected_cat_id is None:
+                st.session_state.pop('filter_cat_id', None)
+            else:
+                st.session_state['filter_cat_id'] = selected_cat_id
     with col_status:
         status_filter = st.selectbox(
             "Status",
@@ -159,18 +220,19 @@ def render_tasks_page():
                     st.progress(progress, text=f"{done_count}/{len(subtasks)}")
 
             with col_actions:
+                # All action buttons are borderless (icon-only)
                 col_a1, col_a2, col_a3 = st.columns(3)
                 with col_a1:
                     if not is_completed:
-                        if st.button("✅", key=f"done_{task['id']}", help="Mark complete"):
+                        if st.button("✅", key=f"done_{task['id']}", help="Mark complete", type="tertiary"):
                             db.update_task(task['id'], status='completed')
                             st.rerun()
                     else:
-                        if st.button("↩️", key=f"undo_{task['id']}", help="Reactivate"):
+                        if st.button("↩️", key=f"undo_{task['id']}", help="Reactivate", type="tertiary"):
                             db.update_task(task['id'], status='active')
                             st.rerun()
                 with col_a2:
-                    if st.button("📝", key=f"edit_{task['id']}", help="Edit"):
+                    if st.button("✏️", key=f"edit_{task['id']}", help="Edit", type="tertiary"):
                         st.session_state[f'editing_task_{task["id"]}'] = True
                 with col_a3:
                     if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
@@ -203,23 +265,34 @@ def render_tasks_page():
                             st.rerun()
 
             # ─── Subtasks ──────────────────────────────────
-            with st.expander(f"Subtasks ({done_count}/{len(subtasks)})" if subtasks else "Add Subtasks", expanded=False):
+            sub_label = f"Subtasks ({done_count}/{len(subtasks)})" if subtasks else "Add Subtasks"
+            with st.expander(sub_label, expanded=False):
+                # Align checkbox with text at same vertical level
+                st.markdown("""
+                <style>
+                [data-testid="stCheckbox"] { margin-bottom:0 !important; padding-bottom:0 !important; }
+                [data-testid="stCheckbox"] > label { padding-top:0.3rem !important; }
+                </style>""", unsafe_allow_html=True)
+
                 for sub in subtasks:
-                    col_check, col_name, col_sub_del = st.columns([1, 6, 1])
+                    col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
                     with col_check:
-                        checked = st.checkbox(
+                        # on_change fires immediately – no manual comparison or rerun needed
+                        st.checkbox(
                             "done", value=bool(sub['is_done']),
                             key=f"sub_{sub['id']}",
-                            label_visibility="collapsed"
+                            label_visibility="collapsed",
+                            on_change=_subtask_toggle_cb,
+                            args=(sub['id'],)
                         )
-                        if checked != bool(sub['is_done']):
-                            db.toggle_subtask(sub['id'])
-                            st.rerun()
                     with col_name:
-                        style = "text-decoration: line-through; color: #9CA3AF;" if sub['is_done'] else ""
-                        st.markdown(f"<span style='{style}'>{sub['title']}</span>", unsafe_allow_html=True)
+                        style = "text-decoration:line-through; color:#9CA3AF;" if sub['is_done'] else ""
+                        st.markdown(
+                            f"<p style='margin:0; padding-top:0.3rem; {style}'>{sub['title']}</p>",
+                            unsafe_allow_html=True
+                        )
                     with col_sub_del:
-                        if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete subtask", type="tertiary"):
+                        if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                             db.delete_subtask(sub['id'])
                             st.rerun()
 

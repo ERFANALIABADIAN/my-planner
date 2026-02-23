@@ -73,10 +73,29 @@ def render_login_page():
 
     st.markdown("""
     <style>
+        /* ── Remove ALL page-transition animations on login ── */
+        .stApp, .stApp > *, .main, .main > *,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"],
+        section.main > div {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+            filter: none !important;
+            opacity: 1 !important;
+        }
+        /* Hide the sidebar completely on the login page */
+        section[data-testid="stSidebar"] {
+            display: none !important;
+        }
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
         .login-container {
-            max-width: 400px;
+            max-width: 420px;
             margin: 0 auto;
-            padding: 2rem;
+            padding: 2rem 1rem;
         }
         .login-title {
             text-align: center;
