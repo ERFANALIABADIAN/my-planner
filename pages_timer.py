@@ -378,11 +378,6 @@ def render_timer_page():
             db.add_time_log(
                 user_id=user_id,
                 task_id=task_id,
-            subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
-
-            db.add_time_log(
-                user_id=user_id,
-                task_id=task_id,
                 duration_minutes=round(minutes_spent, 2),  # 2 decimal places = 1-second precision
                 log_date=date.today().isoformat(),
                 note=f"Timer session",
