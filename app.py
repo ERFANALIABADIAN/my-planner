@@ -90,9 +90,26 @@ st.markdown(f"""
     [data-testid="stExpander"] summary svg {{
         fill: {_text} !important; color: {_text} !important;
     }}
-    /* Radio buttons & Checkboxes labels */
-    .stRadio label, .stCheckbox label {{
+    /* Radio buttons & Checkboxes - all possible selectors */
+    .stRadio label,
+    .stRadio span,
+    .stRadio p,
+    .stRadio div[role="radiogroup"] label,
+    .stRadio > label,
+    .stCheckbox label,
+    .stCheckbox span,
+    [data-testid="stRadio"] label,
+    [data-testid="stRadio"] span,
+    [data-testid="stRadio"] p,
+    [role="radio"] + span,
+    [role="radiogroup"] label {{
         color: {_text} !important;
+        opacity: 1 !important;
+    }}
+    /* Fix the radio button circle border so it's visible */
+    [data-testid="stRadio"] input[type="radio"] + div,
+    [data-testid="stRadio"] input[type="radio"] ~ div {{
+        border-color: {_text} !important;
     }}
     /* All SVG icons: arrows, chevrons, dropdowns, selects */
     svg {{ fill: {_text} !important; color: {_text} !important; }}
