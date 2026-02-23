@@ -352,7 +352,8 @@ with st.sidebar:
             st.session_state['current_page'] = page_key
             st.rerun()
 
-    st.markdown("---")
+    # Smaller separator before content
+    st.write("")
 
 
 # ─── Page Router ──────────────────────────────────────────────
@@ -367,9 +368,8 @@ elif current_page == 'analytics':
 
 # ─── Sidebar Footer (Logout) ──────────────────────────────────
 with st.sidebar:
-    # Push logout to bottom using spacer
-    # Adjust height based on content to keep footer at bottom
-    st.markdown("<div style='height: 40vh'></div>", unsafe_allow_html=True)
+    # Flexible spacer to push logout down, but not too aggressively
+    st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
     st.markdown("---")
 
     # Logout
