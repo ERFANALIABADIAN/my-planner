@@ -230,8 +230,8 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.session_state[f'_log_min_local_{task_id}'] = 25
                     st.session_state[f'_log_date_local_{task_id}'] = date.today()
                     st.session_state[f'_log_note_local_{task_id}'] = ""
-                    # Show toast in top-right like other sections
-                    st.toast(f"✅ Logged {format_minutes(minutes)} for '{task_title}'", icon="⏱")
+                    # Queue toast to show after rerun so it's always visible
+                    st.session_state[f'_pending_log_toast_{task_id}'] = f"✅ Logged {format_minutes(minutes)} for '{task_title}'"
                     st.rerun() # Ensure UI reflects saved data immediately
 
         
@@ -446,6 +446,11 @@ def render_tasks_page():
     _done_bg   = "#0C2D21" if _dark else "#F0FFF4"
     _text_col  = "#E5E7EB" if _dark else "#374151"
     _muted_col = "#9CA3AF"
+    # Render any queued toasts (ensures message shows after rerun)
+    for k in list(st.session_state.keys()):
+        if k.startswith('_pending_log_toast_'):
+            st.toast(st.session_state[k], icon="⏱")
+            st.session_state.pop(k, None)
     # If we're entering the Tasks page from another page, reset any open panels
     if not st.session_state.get('_tasks_initialized', False):
         for k in list(st.session_state.keys()):
