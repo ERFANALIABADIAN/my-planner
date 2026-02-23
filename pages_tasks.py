@@ -27,6 +27,125 @@ def _subtask_toggle_cb(sub_id: int):
         pass
 
 
+@st.fragment
+def _render_sidebar_new_category(user_id, text_col):
+    """Fragment for New Category form to allow fast toggling without full app rerun."""
+    if 'new_cat_open' not in st.session_state:
+        st.session_state['new_cat_open'] = False
+    _nc_open = st.session_state['new_cat_open']
+
+    # Toggle button - NO explicit rerun needed for fragment update
+    if st.button(
+        "▼ ➕ New Category" if _nc_open else "➕ New Category",
+        key="btn_toggle_new_cat",
+        use_container_width=True,
+        type="secondary"
+    ):
+        st.session_state['new_cat_open'] = not _nc_open
+        st.rerun()  # Fragment rerun
+
+    if st.session_state['new_cat_open']:
+        with st.container(border=True):
+            cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
+
+            # Compact layout: Icon Popover + Color Picker side-by-side
+            col_icon, col_color = st.columns([1, 4], gap="small")
+
+            picked = st.session_state.get('new_cat_icon', '📁')
+
+            with col_icon:
+                st.markdown(
+                    f"<p style='font-size:0.875rem; color:{text_col}; "
+                    f"font-weight:400; margin-bottom:4px; line-height:1.4;'>Icon</p>",
+                    unsafe_allow_html=True
+                )
+                popover = st.popover(picked)
+                with popover:
+                    st.markdown("### Choose Icon")
+                    cols = st.columns(5)
+                    for i, icon in enumerate(ICONS):
+                        with cols[i % 5]:
+                            if st.button(icon, key=f"icon_select_{i}", use_container_width=True):
+                                st.session_state['new_cat_icon'] = icon
+                                st.rerun()  # Fragment rerun
+
+            with col_color:
+                cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
+
+            st.write("")  # Spacer
+
+            if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
+                if cat_name.strip():
+                    try:
+                        db.create_category(user_id, cat_name.strip(), cat_color, picked)
+                        st.success(f"Created: {picked} {cat_name}")
+                        st.session_state.pop('new_cat_name', None)
+                        st.session_state['new_cat_icon'] = '📁'
+                        st.session_state['new_cat_open'] = False  # auto-close
+                        st.rerun()  # FULL App rerun needed to update category list
+                    except Exception:
+                        st.error("Category already exists!")
+                else:
+                    st.warning("Enter a name.")
+
+
+@st.fragment
+def _render_add_task_form(user_id, categories, selected_cat_id):
+    """Fragment for Add Task form to allow fast toggling."""
+    if 'add_task_open' not in st.session_state:
+        st.session_state['add_task_open'] = False
+    _at_open = st.session_state['add_task_open']
+
+    with st.container(border=True):
+        # Toggle button - NO explicit rerun needed for fragment update
+        if st.button(
+            "▼ ➕ Add New Task" if _at_open else "➕ Add New Task",
+            key="btn_toggle_add_task",
+            use_container_width=True,
+            type="secondary"
+        ):
+            st.session_state['add_task_open'] = not _at_open
+            st.rerun()  # Fragment rerun
+
+        if _at_open:
+            with st.form("new_task_form", clear_on_submit=True):
+                task_title = st.text_input("Task Title", placeholder="What do you need to do?")
+                task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
+
+                # If a category filter is active, use it; otherwise show dropdown
+                preselected_cat_id = selected_cat_id
+
+                if preselected_cat_id:
+                    task_cat = preselected_cat_id
+                    col_goal_only = st.columns([1])[0]
+                    with col_goal_only:
+                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+                else:
+                    col_cat, col_goal = st.columns([2, 1])
+                    with col_cat:
+                        task_cat = st.selectbox(
+                            "Category",
+                            options=[c['id'] for c in categories],
+                            format_func=lambda x: next(
+                                f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+                            )
+                        )
+                    with col_goal:
+                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+
+                if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
+                    if task_title.strip():
+                        db.create_task(
+                            user_id, task_cat, task_title.strip(),
+                            task_desc.strip(), goal_minutes=task_goal*60
+                        )
+                        st.success(f"Task added!")
+                        st.session_state['add_task_open'] = False  # auto-close
+                        st.rerun()  # FULL App rerun needed to update task list
+                    else:
+                        st.warning("Enter a task title.")
+
+
 
 def format_minutes(minutes: float) -> str:
     """Format minutes to a human-readable string with hours, minutes, and seconds."""
@@ -74,62 +193,8 @@ def render_tasks_page():
     with st.sidebar:
         st.markdown("### 📁 Categories")
 
-        # ── New Category toggle ────────────────────────────────
-        if 'new_cat_open' not in st.session_state:
-            st.session_state['new_cat_open'] = False
-        _nc_open = st.session_state['new_cat_open']
-        if st.button(
-            "▼ ➕ New Category" if _nc_open else "➕ New Category",
-            key="btn_toggle_new_cat",
-            use_container_width=True,
-            type="secondary"
-        ):
-            st.session_state['new_cat_open'] = not _nc_open
-            st.rerun()
-
-        if st.session_state['new_cat_open']:
-            with st.container(border=True):
-                cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
-
-                # Compact layout: Icon Popover + Color Picker side-by-side
-                col_icon, col_color = st.columns([1, 4], gap="small")
-
-                picked = st.session_state.get('new_cat_icon', '📁')
-
-                with col_icon:
-                    st.markdown(
-                        f"<p style='font-size:0.875rem; color:{_text_col}; "
-                        f"font-weight:400; margin-bottom:4px; line-height:1.4;'>Icon</p>",
-                        unsafe_allow_html=True
-                    )
-                    popover = st.popover(picked)
-                    with popover:
-                        st.markdown("### Choose Icon")
-                        cols = st.columns(5)
-                        for i, icon in enumerate(ICONS):
-                            with cols[i % 5]:
-                                if st.button(icon, key=f"icon_select_{i}", use_container_width=True):
-                                    st.session_state['new_cat_icon'] = icon
-                                    st.rerun()
-
-                with col_color:
-                    cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
-
-                st.write("")  # Spacer
-
-                if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
-                    if cat_name.strip():
-                        try:
-                            db.create_category(user_id, cat_name.strip(), cat_color, picked)
-                            st.success(f"Created: {picked} {cat_name}")
-                            st.session_state.pop('new_cat_name', None)
-                            st.session_state['new_cat_icon'] = '📁'
-                            st.session_state['new_cat_open'] = False  # auto-close
-                            st.rerun()
-                        except Exception:
-                            st.error("Category already exists!")
-                    else:
-                        st.warning("Enter a name.")
+        # ── New Category toggle (Fragment) ────────────────────────────────
+        _render_sidebar_new_category(user_id, _text_col)
 
         # Category list – click to filter, trash to delete
         if categories:
@@ -204,58 +269,8 @@ def render_tasks_page():
             label_visibility="collapsed"
         )
 
-    # Add new task
-    if 'add_task_open' not in st.session_state:
-        st.session_state['add_task_open'] = False
-    _at_open = st.session_state['add_task_open']
-
-    with st.container(border=True):
-        if st.button(
-            "▼ ➕ Add New Task" if _at_open else "➕ Add New Task",
-            key="btn_toggle_add_task",
-            use_container_width=True,
-            type="secondary"
-        ):
-            st.session_state['add_task_open'] = not _at_open
-            st.rerun()
-
-        if _at_open:
-            with st.form("new_task_form", clear_on_submit=True):
-                task_title = st.text_input("Task Title", placeholder="What do you need to do?")
-                task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
-
-                # If a category filter is active, use it; otherwise show dropdown
-                preselected_cat_id = selected_cat_id
-
-                if preselected_cat_id:
-                    task_cat = preselected_cat_id
-                    col_goal_only = st.columns([1])[0]
-                    with col_goal_only:
-                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
-                else:
-                    col_cat, col_goal = st.columns([2, 1])
-                    with col_cat:
-                        task_cat = st.selectbox(
-                            "Category",
-                            options=[c['id'] for c in categories],
-                            format_func=lambda x: next(
-                                f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
-                            )
-                        )
-                    with col_goal:
-                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
-
-                if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
-                    if task_title.strip():
-                        db.create_task(
-                            user_id, task_cat, task_title.strip(),
-                            task_desc.strip(), goal_minutes=task_goal*60
-                        )
-                        st.success(f"Task added!")
-                        st.session_state['add_task_open'] = False  # auto-close
-                        st.rerun()
-                    else:
-                        st.warning("Enter a task title.")
+    # Add new task (Fragment)
+    _render_add_task_form(user_id, categories, selected_cat_id)
 
     # Task list
     status_param = None if status_filter == "all" else status_filter

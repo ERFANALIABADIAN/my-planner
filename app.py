@@ -173,9 +173,16 @@ st.markdown(f"""
         color: {_text} !important;
     }}
     /* Sidebar secondary buttons – override Streamlit's sidebar default white */
-    [data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
+    section[data-testid="stSidebar"] button[kind="secondary"],
+    section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
         background-color: {_surface2} !important;
+        background: {_surface2} !important;
         border: 1px solid {_border} !important;
+        color: {_text} !important;
+        box-shadow: none !important;
+    }}
+    section[data-testid="stSidebar"] button[kind="secondary"] p,
+    section[data-testid="stSidebar"] .stButton > button[kind="secondary"] p {{
         color: {_text} !important;
     }}
 
