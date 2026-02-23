@@ -265,12 +265,16 @@ SCHEMA_SQL = """
     CREATE INDEX IF NOT EXISTS idx_time_logs_date ON time_logs(log_date);
     CREATE INDEX IF NOT EXISTS idx_time_logs_user ON time_logs(user_id);
     CREATE INDEX IF NOT EXISTS idx_time_logs_task ON time_logs(task_id);
+    CREATE INDEX IF NOT EXISTS idx_time_logs_subtask ON time_logs(subtask_id);
     CREATE INDEX IF NOT EXISTS idx_time_logs_user_date ON time_logs(user_id, log_date);
+    CREATE INDEX IF NOT EXISTS idx_time_logs_user_task_date ON time_logs(user_id, task_id, log_date);
     CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks(user_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_category ON tasks(category_id);
     CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_tasks_user_sort ON tasks(user_id, sort_order);
     CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id);
     CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id);
+    CREATE INDEX IF NOT EXISTS idx_subtasks_task_sort ON subtasks(task_id, sort_order);
     CREATE TABLE IF NOT EXISTS user_sessions (
         token TEXT PRIMARY KEY,
         user_id INTEGER NOT NULL,
