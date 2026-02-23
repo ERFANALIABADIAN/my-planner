@@ -45,7 +45,7 @@ def _render_sidebar_new_category(user_id, text_col):
         st.rerun()  # Fragment rerun
 
     if st.session_state['new_cat_open']:
-        with st.container(border=True):
+        with st.container():
             cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
 
             # Compact layout: Icon Popover + Color Picker side-by-side
@@ -98,7 +98,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
         st.session_state[_sub_key] = False
     _sub_open = st.session_state[_sub_key]
 
-    with st.container(border=True):
+    with st.container():
         if st.button(
             ("▼ " if _sub_open else "") + sub_label,
             key=f"btn_toggle_sub_{task_id}",
@@ -166,7 +166,7 @@ def _render_log_time_section(user_id, task_id, task_title):
         st.session_state[_log_key] = False
     _log_open = st.session_state[_log_key]
 
-    with st.container(border=True):
+    with st.container():
         if st.button(
             "▼ ⏱ Log Time" if _log_open else "⏱ Log Time",
             key=f"btn_toggle_log_{task_id}",
@@ -211,7 +211,7 @@ def _render_add_task_form(user_id, categories, selected_cat_id):
         st.session_state['add_task_open'] = False
     _at_open = st.session_state['add_task_open']
 
-    with st.container(border=True):
+    with st.container():
         # Toggle button - NO explicit rerun needed for fragment update
         if st.button(
             "▼ ➕ Add New Task" if _at_open else "➕ Add New Task",
