@@ -77,16 +77,23 @@ def render_tasks_page():
         with st.expander("➕ New Category", expanded=False):
             cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
 
-            # Icon picker
-            st.markdown("**Icon** – click to select:")
+            # Icon picker - collapsed by default
             picked = st.session_state.get('new_cat_icon', '📁')
-            icon_cols = st.columns(9)
-            for idx, ico in enumerate(ICONS):
-                with icon_cols[idx % 9]:
-                    btn_type = "primary" if ico == picked else "secondary"
-                    if st.button(ico, key=f"ico_{idx}", type=btn_type):
-                        st.session_state['new_cat_icon'] = ico
-                        st.rerun()
+            
+            # Show current selection
+            col_icon_show, col_picker_toggle = st.columns([1, 4])
+            with col_icon_show:
+                st.markdown(f"**Icon:** &nbsp; <span style='font-size:1.5rem;'>{picked}</span>", unsafe_allow_html=True)
+            
+            # Expander for picking other icons
+            with st.expander("Choose Icon", expanded=False):
+                icon_cols = st.columns(9)
+                for idx, ico in enumerate(ICONS):
+                    with icon_cols[idx % 9]:
+                        btn_type = "primary" if ico == picked else "secondary"
+                        if st.button(ico, key=f"ico_{idx}", type=btn_type):
+                            st.session_state['new_cat_icon'] = ico
+                            st.rerun()
 
             cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
             if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
@@ -180,17 +187,30 @@ def render_tasks_page():
         with st.form("new_task_form", clear_on_submit=True):
             task_title = st.text_input("Task Title", placeholder="What do you need to do?")
             task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
-            col_cat, col_goal = st.columns([2, 1])
-            with col_cat:
-                task_cat = st.selectbox(
-                    "Category",
-                    options=[c['id'] for c in categories],
-                    format_func=lambda x: next(
-                        f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+            
+            # Logic: If a specific category is selected (not "All Categories"), auto-select it.
+            # Otherwise, show the category dropdown.
+            preselected_cat_id = selected_cat_id
+            
+            if preselected_cat_id:
+                # Hidden logic: user already selected a category filter
+                task_cat = preselected_cat_id
+                col_goal_only = st.columns([1])[0]
+                with col_goal_only:
+                     task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+            else:
+                # User is viewing "All Categories", must pick one
+                col_cat, col_goal = st.columns([2, 1])
+                with col_cat:
+                    task_cat = st.selectbox(
+                        "Category",
+                        options=[c['id'] for c in categories],
+                        format_func=lambda x: next(
+                            f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+                        )
                     )
-                )
-            with col_goal:
-                task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+                with col_goal:
+                    task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
 
             if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
                 if task_title.strip():
@@ -230,15 +250,6 @@ def render_tasks_page():
         goal_minutes = task.get('goal_minutes') or 0
 
         with st.container():
-            st.markdown(
-                f"""<div style='border-left: 4px solid {border_color}; padding: 0.5rem 1rem;
-                     margin-bottom: 0.5rem; border-radius: 0 8px 8px 0;
-                     background: {"#0C2D21" if (_dark and is_completed) else ("#F0FFF4" if is_completed else (_card_bg))};
-                     opacity: {"0.75" if is_completed else "1"}; color: {_text_col};'>
-                </div>""",
-                unsafe_allow_html=True
-            )
-
             col_main, col_time, col_actions = st.columns([5, 2, 2])
 
             with col_main:
