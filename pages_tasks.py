@@ -172,7 +172,7 @@ def _render_log_time_section(user_id, task_id, task_title):
             type="secondary"
         ):
             st.session_state[_log_key] = not _log_open
-            st.rerun()  # Fragment rerun
+            # No st.rerun() needed - button click naturally triggers fragment rerun
 
         if _log_open:
             col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
@@ -192,6 +192,7 @@ def _render_log_time_section(user_id, task_id, task_title):
                     key=f"log_note_{task_id}", label_visibility="collapsed"
                 )
             with col_add:
+                # Use tertiary button with inline saving
                 if st.button("💾", key=f"save_log_{task_id}"):
                     db.add_time_log(
                         user_id, task_id, log_mins,
@@ -199,7 +200,9 @@ def _render_log_time_section(user_id, task_id, task_title):
                     )
                     st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task_title}'", icon="⏱")
                     st.session_state[_log_key] = False  # auto-close
-                    st.rerun()
+                    # Natural rerun will re-render fragment with updated data
+        
+        else:
 
 
 @st.fragment
