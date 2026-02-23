@@ -74,53 +74,62 @@ def render_tasks_page():
     with st.sidebar:
         st.markdown("### 📁 Categories")
 
-        with st.expander("➕ New Category", expanded=False):
-            cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
-            
-            # Compact layout: Icon Popover + Color Picker side-by-side
-            # Using columns to align them
-            # Using a custom container to force alignment since labels cause offset
-            col_icon, col_color = st.columns([1, 4], gap="small")
-            
-            picked = st.session_state.get('new_cat_icon', '📁')
+        # ── New Category toggle ────────────────────────────────
+        if 'new_cat_open' not in st.session_state:
+            st.session_state['new_cat_open'] = False
+        _nc_open = st.session_state['new_cat_open']
+        if st.button(
+            "▼ ➕ New Category" if _nc_open else "▶ ➕ New Category",
+            key="btn_toggle_new_cat",
+            use_container_width=True,
+            type="secondary"
+        ):
+            st.session_state['new_cat_open'] = not _nc_open
+            st.rerun()
 
-            with col_icon:
-                # Use same label style as "Name" and "Color" widgets
-                st.markdown(
-                    f"<p style='font-size:0.875rem; color:{_text_col}; "
-                    f"font-weight:400; margin-bottom:4px; line-height:1.4;'>Icon</p>",
-                    unsafe_allow_html=True
-                )
-                # Popover button - no use_container_width so it stays square
-                popover = st.popover(picked)
-                with popover:
-                    st.markdown("### Choose Icon")
-                    cols = st.columns(5)
-                    for i, icon in enumerate(ICONS):
-                        with cols[i % 5]:
-                            if st.button(icon, key=f"icon_select_{i}", use_container_width=True):
-                                st.session_state['new_cat_icon'] = icon
-                                st.rerun()
+        if st.session_state['new_cat_open']:
+            with st.container(border=True):
+                cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
 
-            with col_color:
-                # Color picker handles its own label, we just need to ensure vertical alignment
-                # The label "Color" is inside the widget. 
-                cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
+                # Compact layout: Icon Popover + Color Picker side-by-side
+                col_icon, col_color = st.columns([1, 4], gap="small")
 
-            st.write("") # Spacer
+                picked = st.session_state.get('new_cat_icon', '📁')
 
-            if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
-                if cat_name.strip():
-                    try:
-                        db.create_category(user_id, cat_name.strip(), cat_color, picked)
-                        st.success(f"Created: {picked} {cat_name}")
-                        st.session_state.pop('new_cat_name', None)
-                        st.session_state['new_cat_icon'] = '📁'
-                        st.rerun()
-                    except Exception:
-                        st.error("Category already exists!")
-                else:
-                    st.warning("Enter a name.")
+                with col_icon:
+                    st.markdown(
+                        f"<p style='font-size:0.875rem; color:{_text_col}; "
+                        f"font-weight:400; margin-bottom:4px; line-height:1.4;'>Icon</p>",
+                        unsafe_allow_html=True
+                    )
+                    popover = st.popover(picked)
+                    with popover:
+                        st.markdown("### Choose Icon")
+                        cols = st.columns(5)
+                        for i, icon in enumerate(ICONS):
+                            with cols[i % 5]:
+                                if st.button(icon, key=f"icon_select_{i}", use_container_width=True):
+                                    st.session_state['new_cat_icon'] = icon
+                                    st.rerun()
+
+                with col_color:
+                    cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
+
+                st.write("")  # Spacer
+
+                if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
+                    if cat_name.strip():
+                        try:
+                            db.create_category(user_id, cat_name.strip(), cat_color, picked)
+                            st.success(f"Created: {picked} {cat_name}")
+                            st.session_state.pop('new_cat_name', None)
+                            st.session_state['new_cat_icon'] = '📁'
+                            st.session_state['new_cat_open'] = False  # auto-close
+                            st.rerun()
+                        except Exception:
+                            st.error("Category already exists!")
+                    else:
+                        st.warning("Enter a name.")
 
         # Category list – click to filter, trash to delete
         if categories:
@@ -196,53 +205,57 @@ def render_tasks_page():
         )
 
     # Add new task
-    # We use a session state key to control the expander's state.
-    # When a task is added, we set 'add_task_expanded' to False to close it.
-    if 'add_task_expanded' not in st.session_state:
-        st.session_state['add_task_expanded'] = False
+    if 'add_task_open' not in st.session_state:
+        st.session_state['add_task_open'] = False
+    _at_open = st.session_state['add_task_open']
 
-    with st.expander("➕ Add New Task", expanded=st.session_state['add_task_expanded']):
-        with st.form("new_task_form", clear_on_submit=True):
-            task_title = st.text_input("Task Title", placeholder="What do you need to do?")
-            task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
-            
-            # Logic: If a specific category is selected (not "All Categories"), auto-select it.
-            # Otherwise, show the category dropdown.
-            preselected_cat_id = selected_cat_id
-            
-            if preselected_cat_id:
-                # Hidden logic: user already selected a category filter
-                task_cat = preselected_cat_id
-                col_goal_only = st.columns([1])[0]
-                with col_goal_only:
-                     task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
-            else:
-                # User is viewing "All Categories", must pick one
-                col_cat, col_goal = st.columns([2, 1])
-                with col_cat:
-                    task_cat = st.selectbox(
-                        "Category",
-                        options=[c['id'] for c in categories],
-                        format_func=lambda x: next(
-                            f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
-                        )
-                    )
-                with col_goal:
-                    task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+    with st.container(border=True):
+        if st.button(
+            "▼ ➕ Add New Task" if _at_open else "▶ ➕ Add New Task",
+            key="btn_toggle_add_task",
+            use_container_width=True,
+            type="secondary"
+        ):
+            st.session_state['add_task_open'] = not _at_open
+            st.rerun()
 
-            if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
-                if task_title.strip():
-                    db.create_task(
-                        user_id, task_cat, task_title.strip(), 
-                        task_desc.strip(), goal_minutes=task_goal*60
-                    )
-                    st.success(f"Task added!")
-                    st.session_state['add_task_expanded'] = False
-                    st.rerun()
+        if _at_open:
+            with st.form("new_task_form", clear_on_submit=True):
+                task_title = st.text_input("Task Title", placeholder="What do you need to do?")
+                task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
+
+                # If a category filter is active, use it; otherwise show dropdown
+                preselected_cat_id = selected_cat_id
+
+                if preselected_cat_id:
+                    task_cat = preselected_cat_id
+                    col_goal_only = st.columns([1])[0]
+                    with col_goal_only:
+                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
                 else:
-                    st.session_state['add_task_expanded'] = True
-                    st.warning("Enter a task title.")
-                    st.rerun()
+                    col_cat, col_goal = st.columns([2, 1])
+                    with col_cat:
+                        task_cat = st.selectbox(
+                            "Category",
+                            options=[c['id'] for c in categories],
+                            format_func=lambda x: next(
+                                f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+                            )
+                        )
+                    with col_goal:
+                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+
+                if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
+                    if task_title.strip():
+                        db.create_task(
+                            user_id, task_cat, task_title.strip(),
+                            task_desc.strip(), goal_minutes=task_goal*60
+                        )
+                        st.success(f"Task added!")
+                        st.session_state['add_task_open'] = False  # auto-close
+                        st.rerun()
+                    else:
+                        st.warning("Enter a task title.")
 
     # Task list
     status_param = None if status_filter == "all" else status_filter
@@ -364,92 +377,122 @@ def render_tasks_page():
 
             # ─── Subtasks ──────────────────────────────────
             sub_label = f"Subtasks ({done_count}/{len(subtasks)})" if subtasks else "Add Subtasks"
-            with st.expander(sub_label, expanded=False):
-                # Flex-center so checkbox aligns with adjacent text
-                st.markdown("""
-                <style>
-                div[data-testid="stCheckbox"] {
-                    padding: 0 !important; margin: 0 !important;
-                }
-                div[data-testid="stCheckbox"] > label {
-                    display: flex !important; align-items: center !important;
-                    gap: 0.5rem !important; padding: 0 !important;
-                    min-height: 1.8rem !important;
-                }
-                div[data-testid="column"]:has(div[data-testid="stCheckbox"]) {
-                    display: flex !important; align-items: center !important;
-                }
-                </style>""", unsafe_allow_html=True)
+            _sub_key = f'sub_open_{task["id"]}'
+            if _sub_key not in st.session_state:
+                st.session_state[_sub_key] = False
+            _sub_open = st.session_state[_sub_key]
 
-                for sub in subtasks:
-                    col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
-                    with col_check:
-                        st.checkbox(
-                            "done", value=bool(sub['is_done']),
-                            key=f"sub_{sub['id']}",
-                            label_visibility="collapsed",
-                            on_change=_subtask_toggle_cb,
-                            args=(sub['id'],)
-                        )
-                    with col_name:
-                        strike = "line-through" if sub['is_done'] else "none"
-                        color  = _muted_col if sub['is_done'] else _text_col
-                        st.markdown(
-                            f"<div style='display:flex; align-items:center; min-height:1.8rem;"
-                            f" text-decoration:{strike}; color:{color};'>{sub['title']}</div>",
-                            unsafe_allow_html=True
-                        )
-                    with col_sub_del:
-                        if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
-                            db.delete_subtask(sub['id'])
-                            st.rerun()
+            with st.container(border=True):
+                if st.button(
+                    ("▼ " if _sub_open else "▶ ") + sub_label,
+                    key=f"btn_toggle_sub_{task['id']}",
+                    use_container_width=True,
+                    type="secondary"
+                ):
+                    st.session_state[_sub_key] = not _sub_open
+                    st.rerun()
 
-                # Add subtask
-                col_new_sub, col_add_sub = st.columns([5, 1])
-                with col_new_sub:
-                    new_sub_title = st.text_input(
-                        "New subtask",
-                        placeholder="Add a subtask...",
-                        key=f"new_sub_{task['id']}",
-                        label_visibility="collapsed"
-                    )
-                with col_add_sub:
-                    if st.button("➕", key=f"add_sub_{task['id']}"):
-                        if new_sub_title.strip():
-                            db.create_subtask(task['id'], new_sub_title.strip())
-                            st.rerun()
+                if _sub_open:
+                    st.markdown("""
+                    <style>
+                    div[data-testid="stCheckbox"] {
+                        padding: 0 !important; margin: 0 !important;
+                    }
+                    div[data-testid="stCheckbox"] > label {
+                        display: flex !important; align-items: center !important;
+                        gap: 0.5rem !important; padding: 0 !important;
+                        min-height: 1.8rem !important;
+                    }
+                    div[data-testid="column"]:has(div[data-testid="stCheckbox"]) {
+                        display: flex !important; align-items: center !important;
+                    }
+                    </style>""", unsafe_allow_html=True)
+
+                    for sub in subtasks:
+                        col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
+                        with col_check:
+                            st.checkbox(
+                                "done", value=bool(sub['is_done']),
+                                key=f"sub_{sub['id']}",
+                                label_visibility="collapsed",
+                                on_change=_subtask_toggle_cb,
+                                args=(sub['id'],)
+                            )
+                        with col_name:
+                            strike = "line-through" if sub['is_done'] else "none"
+                            color  = _muted_col if sub['is_done'] else _text_col
+                            st.markdown(
+                                f"<div style='display:flex; align-items:center; min-height:1.8rem;"
+                                f" text-decoration:{strike}; color:{color};'>{sub['title']}</div>",
+                                unsafe_allow_html=True
+                            )
+                        with col_sub_del:
+                            if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
+                                db.delete_subtask(sub['id'])
+                                st.rerun()
+
+                    # Add subtask
+                    col_new_sub, col_add_sub = st.columns([5, 1])
+                    with col_new_sub:
+                        new_sub_title = st.text_input(
+                            "New subtask",
+                            placeholder="Add a subtask...",
+                            key=f"new_sub_{task['id']}",
+                            label_visibility="collapsed"
+                        )
+                    with col_add_sub:
+                        if st.button("➕", key=f"add_sub_{task['id']}"):
+                            if new_sub_title.strip():
+                                db.create_subtask(task['id'], new_sub_title.strip())
+                                st.session_state[_sub_key] = False  # auto-close
+                                st.rerun()
 
             # ─── Quick Time Log ────────────────────────────
-            with st.expander("⏱ Log Time", expanded=False):
-                col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
-                with col_dur:
-                    log_mins = st.number_input(
-                        "Minutes", min_value=1, value=25,
-                        key=f"log_min_{task['id']}",
-                        label_visibility="collapsed"
-                    )
-                with col_date:
-                    log_date = st.date_input(
-                        "Date", value=date.today(),
-                        key=f"log_date_{task['id']}",
-                        label_visibility="collapsed"
-                    )
-                with col_note:
-                    log_note = st.text_input(
-                        "Note", placeholder="What did you work on?",
-                        key=f"log_note_{task['id']}",
-                        label_visibility="collapsed"
-                    )
-                with col_add:
-                    if st.button("💾", key=f"save_log_{task['id']}"):
-                        db.add_time_log(
-                            user_id, task['id'],
-                            log_mins,
-                            log_date.isoformat(),
-                            log_note, "manual"
+            _log_key = f'log_open_{task["id"]}'
+            if _log_key not in st.session_state:
+                st.session_state[_log_key] = False
+            _log_open = st.session_state[_log_key]
+
+            with st.container(border=True):
+                if st.button(
+                    "▼ ⏱ Log Time" if _log_open else "▶ ⏱ Log Time",
+                    key=f"btn_toggle_log_{task['id']}",
+                    use_container_width=True,
+                    type="secondary"
+                ):
+                    st.session_state[_log_key] = not _log_open
+                    st.rerun()
+
+                if _log_open:
+                    col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
+                    with col_dur:
+                        log_mins = st.number_input(
+                            "Minutes", min_value=1, value=25,
+                            key=f"log_min_{task['id']}",
+                            label_visibility="collapsed"
                         )
-                        # Use toast: small floating notification, no layout disruption
-                        st.toast(f"\u2705 Logged {format_minutes(log_mins)} for '{task['title']}'", icon="\u23f1")
-                        st.rerun()
+                    with col_date:
+                        log_date = st.date_input(
+                            "Date", value=date.today(),
+                            key=f"log_date_{task['id']}",
+                            label_visibility="collapsed"
+                        )
+                    with col_note:
+                        log_note = st.text_input(
+                            "Note", placeholder="What did you work on?",
+                            key=f"log_note_{task['id']}",
+                            label_visibility="collapsed"
+                        )
+                    with col_add:
+                        if st.button("💾", key=f"save_log_{task['id']}"):
+                            db.add_time_log(
+                                user_id, task['id'],
+                                log_mins,
+                                log_date.isoformat(),
+                                log_note, "manual"
+                            )
+                            st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task['title']}'", icon="⏱")
+                            st.session_state[_log_key] = False  # auto-close
+                            st.rerun()
 
             st.divider()

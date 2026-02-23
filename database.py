@@ -271,6 +271,13 @@ SCHEMA_SQL = """
     CREATE INDEX IF NOT EXISTS idx_tasks_user_status ON tasks(user_id, status);
     CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id);
     CREATE INDEX IF NOT EXISTS idx_subtasks_task ON subtasks(task_id);
+    CREATE TABLE IF NOT EXISTS user_sessions (
+        token TEXT PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        expires_at TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 """
 
 
@@ -783,3 +790,40 @@ def delete_active_timer(user_id: int):
     else:
         with get_connection() as conn:
             conn.execute("DELETE FROM active_timers WHERE user_id = ?", [user_id])
+
+
+# ─── Session Token Functions ──────────────────────────────────────────────────
+
+import secrets as _secrets
+
+
+def create_session_token(user_id: int) -> str:
+    """Generate a 30-day session token and persist it to DB."""
+    from datetime import datetime, timedelta
+    token = _secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%dT%H:%M:%S')
+    # One active session per user
+    _query("DELETE FROM user_sessions WHERE user_id = ?", [user_id], fetch="none")
+    _query(
+        "INSERT INTO user_sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+        [token, user_id, expires_at], fetch="none"
+    )
+    return token
+
+
+def get_session_user(token: str):
+    """Look up a valid (non-expired) session token and return the user row."""
+    from datetime import datetime
+    now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+    return _query(
+        """SELECT u.id, u.username, u.display_name
+           FROM user_sessions s
+           JOIN users u ON u.id = s.user_id
+           WHERE s.token = ? AND s.expires_at > ?""",
+        [token, now], fetch="one"
+    )
+
+
+def delete_session_token(token: str):
+    """Delete a session token (on logout)."""
+    _query("DELETE FROM user_sessions WHERE token = ?", [token], fetch="none")

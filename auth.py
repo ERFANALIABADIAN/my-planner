@@ -6,6 +6,7 @@ Handles user login, registration, and session management.
 import bcrypt
 import streamlit as st
 from database import get_user_by_username, create_user
+import database as _db
 
 
 def hash_password(password: str) -> str:
@@ -26,6 +27,13 @@ def login_user(username: str, password: str) -> bool:
         st.session_state['user_id'] = user['id']
         st.session_state['username'] = user['username']
         st.session_state['display_name'] = user['display_name']
+        # Persist session: store token in DB and add to URL so refresh works
+        try:
+            token = _db.create_session_token(user['id'])
+            st.session_state['_session_token'] = token
+            st.query_params['_s'] = token
+        except Exception:
+            pass
         return True
     return False
 
@@ -46,6 +54,13 @@ def register_user(username: str, password: str, display_name: str = None) -> tup
         st.session_state['user_id'] = user_id
         st.session_state['username'] = username
         st.session_state['display_name'] = display_name or username
+        # Persist session
+        try:
+            token = _db.create_session_token(user_id)
+            st.session_state['_session_token'] = token
+            st.query_params['_s'] = token
+        except Exception:
+            pass
         return True, "Account created successfully!"
     except Exception as e:
         return False, f"Error: {str(e)}"
@@ -53,14 +68,42 @@ def register_user(username: str, password: str, display_name: str = None) -> tup
 
 def logout_user():
     """Clear session state to logout."""
+    # Delete token from DB
+    token = st.session_state.get('_session_token')
+    if token:
+        try:
+            _db.delete_session_token(token)
+        except Exception:
+            pass
+    # Clear URL token so refresh shows login
+    try:
+        st.query_params.clear()
+    except Exception:
+        pass
     for key in ['authenticated', 'user_id', 'username', 'display_name',
-                'timer_running', 'timer_start', 'timer_task_id']:
+                'timer_running', 'timer_start', 'timer_task_id', '_session_token']:
         st.session_state.pop(key, None)
 
 
 def is_authenticated() -> bool:
-    """Check if user is currently authenticated."""
-    return st.session_state.get('authenticated', False)
+    """Check if user is currently authenticated. Also restores session from URL token on refresh."""
+    if st.session_state.get('authenticated', False):
+        return True
+    # Try to restore from persistent URL token (survives browser refresh)
+    token = st.query_params.get('_s', None)
+    if token:
+        try:
+            user = _db.get_session_user(token)
+            if user:
+                st.session_state['authenticated'] = True
+                st.session_state['user_id'] = user['id']
+                st.session_state['username'] = user['username']
+                st.session_state['display_name'] = user['display_name']
+                st.session_state['_session_token'] = token
+                return True
+        except Exception:
+            pass
+    return False
 
 
 def get_current_user_id() -> int:

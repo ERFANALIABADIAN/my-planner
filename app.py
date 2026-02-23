@@ -438,13 +438,16 @@ elif current_page == 'timer':
 elif current_page == 'analytics':
     render_analytics_page()
 
-# ─── Sidebar Footer (Logout) ──────────────────────────────────
+# ─── Sidebar Footer (Refresh / Logout) ───────────────────────
 with st.sidebar:
-    # Flexible spacer to push logout down, but not too aggressively
     st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    # Logout
-    if st.button("🚪 Logout", use_container_width=True):
-        logout_user()
-        st.rerun()
+    col_refresh, col_logout = st.sidebar.columns(2)
+    with col_refresh:
+        if st.button("🔄 Refresh", use_container_width=True, help="Reload data"):
+            st.rerun()
+    with col_logout:
+        if st.button("🚪 Logout", use_container_width=True):
+            logout_user()
+            st.rerun()
