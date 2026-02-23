@@ -298,7 +298,7 @@ st.markdown(f"""
         color: {_muted} !important;
     }}
     
-    /* Popover & Icon Picker Fixes */
+    /* Popover & Icon Picker Fixes - ULTIMATE DARK MODE FIX */
     /* 1. The trigger button (showing current icon) */
     [data-testid="stPopover"] > button {{
         background-color: {_input} !important;
@@ -308,12 +308,23 @@ st.markdown(f"""
         width: 100%;
         display: flex; align-items: center; justify-content: center;
     }}
-    /* 2. The popover container (content window) */
-    [data-baseweb="popover"] > div, 
-    [data-baseweb="popover"] > div > div {{
-        background-color: {_surface} !important;
-        border: 1px solid {_border} !important;
+    /* Hover state for trigger button */
+    [data-testid="stPopover"] > button:hover {{
+        border-color: {_accent} !important;
+        color: {_accent} !important;
     }}
+
+    /* 2. The popover container (content window) - multiple layers needed */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div,
+    div[data-baseweb="popover"] > div > div,    
+    .stPopover > div,
+    div[role="dialog"] {{
+        background-color: {_surface} !important;
+        color: {_text} !important;
+        border-color: {_border} !important;
+    }}
+
     /* 3. The icon buttons grid inside the popover */
     [data-baseweb="popover"] button {{
         background-color: {_surface2} !important;
@@ -326,9 +337,11 @@ st.markdown(f"""
         border-color: {_accent} !important;
         transform: scale(1.1);
         z-index: 10;
-        background-color: {_surface} !important;
+        background-color: {_input} !important;
+        color: {_accent} !important;
     }}
-    [data-baseweb="popover"] [data-testid="stMarkdownContainer"] p {{
+    [data-baseweb="popover"] [data-testid="stMarkdownContainer"] p,
+    [data-baseweb="popover"] h1, [data-baseweb="popover"] h2, [data-baseweb="popover"] h3 {{
         color: {_text} !important;
     }}
 

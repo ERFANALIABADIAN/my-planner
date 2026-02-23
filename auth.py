@@ -70,47 +70,57 @@ def get_current_user_id() -> int:
 
 def render_login_page():
     """Render the login/register page."""
+    
+    # Check theme state from session to determine colors
+    import streamlit as st
+    theme = st.session_state.get('theme', 'light')
+    is_dark = (theme == 'dark')
 
-    st.markdown("""
+    # Define colors based on theme
+    bg_color = "#0F1117" if is_dark else "#F5F7FA"
+    text_color = "#FFFFFF" if is_dark else "#1E1E2E"
+    subtitle_color = "#9CA3AF" if is_dark else "#6B7280"
+
+    st.markdown(f"""
     <style>
         /* ── Full-screen login overlay ─────────────────────────── */
         /* Covers any stale app content that might show through    */
-        [data-testid="stAppViewContainer"]::before {
+        [data-testid="stAppViewContainer"]::before {{
             content: '';
             position: fixed;
             inset: 0;
-            background: var(--login-bg, #F5F7FA);
+            background: {bg_color};
             z-index: 100;
-        }
+        }}
         /* Bring the main block above the overlay                  */
         [data-testid="stMain"],
-        [data-testid="stMainBlockContainer"] {
+        [data-testid="stMainBlockContainer"] {{
             position: relative;
             z-index: 200;
-        }
+        }}
         /* ── Kill ALL page-enter animations ────────────────────── */
         .stApp, .stApp > *, .main, .main > *,
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"],
-        section.main > div {
+        section.main > div {{
             animation: none !important;
             transition: none !important;
             transform: none !important;
             filter: none !important;
             opacity: 1 !important;
-        }
+        }}
         /* ── Hide sidebar on login ──────────────────────────────── */
-        section[data-testid="stSidebar"] { display: none !important; }
-        [data-testid="collapsedControl"]  { display: none !important; }
+        section[data-testid="stSidebar"] {{ display: none !important; }}
+        [data-testid="collapsedControl"]  {{ display: none !important; }}
         /* ── Login card styling ─────────────────────────────────── */
-        .login-title {
+        .login-title {{
             text-align: center; font-size: 2.5rem;
-            font-weight: 700; color: #1E1E2E; margin-bottom: 0.5rem;
-        }
-        .login-subtitle {
-            text-align: center; color: #6B7280;
+            font-weight: 700; color: {text_color}; margin-bottom: 0.5rem;
+        }}
+        .login-subtitle {{
+            text-align: center; color: {subtitle_color};
             margin-bottom: 2rem; font-size: 1rem;
-        }
+        }}
     </style>
     """, unsafe_allow_html=True)
 
