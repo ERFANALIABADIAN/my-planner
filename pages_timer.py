@@ -199,7 +199,11 @@ def render_timer_page():
             st.session_state['pomodoro_minutes'] = pomodoro_min
 
     with col_timer:
-        # Initialize timer state
+        # ─── Load Active Timer from DB (Persistence) ────────────────────────
+        # Check if we have an active timer in DB that isn't in session yet or overrides it
+        active_timer_db = db.get_active_timer(user_id)
+        
+        # Initialize session state if not present
         if 'timer_running' not in st.session_state:
             st.session_state['timer_running'] = False
         if 'timer_start' not in st.session_state:
@@ -209,6 +213,28 @@ def render_timer_page():
         if 'timer_paused_elapsed' not in st.session_state:
             st.session_state['timer_paused_elapsed'] = 0
 
+        # Sync DB state to Session State if DB has a newer or valid state
+        if active_timer_db:
+            db_running = bool(active_timer_db['is_running'])
+            db_start = datetime.fromisoformat(active_timer_db['start_time']) if active_timer_db['start_time'] else None
+            db_paused = active_timer_db['paused_elapsed']
+            
+            # If our session is "empty" or out of sync, adopt DB state
+            # Logic: We trust the DB as the "source of truth" for cross-device/tab safety
+            if 'db_synced' not in st.session_state or not st.session_state['db_synced']:
+                st.session_state['timer_running'] = db_running
+                st.session_state['timer_start'] = db_start
+                st.session_state['timer_paused_elapsed'] = db_paused
+                st.session_state['timer_task_id'] = active_timer_db['task_id']
+                st.session_state['timer_subtask_id'] = active_timer_db['subtask_id']
+                st.session_state['pomodoro_minutes'] = active_timer_db['pomodoro_minutes']
+                
+                # Update the UI selectors to match the active task later if possible
+                # (Complex due to selectbox UI, but at least the timer runs correctly)
+                selected_task_id = active_timer_db['task_id'] 
+                
+                st.session_state['db_synced'] = True
+        
         # ── Session keepalive: auto-refresh every 3 min ONLY when timer is running ──
         # Prevents Streamlit Cloud from killing the WebSocket connection (session wipe).
         # timer_start stays in session_state so elapsed is always recomputed correctly.
@@ -226,6 +252,12 @@ def render_timer_page():
 
         # Centered Header
         st.markdown("<h3 style='text-align: center;'>🕐 Timer</h3>", unsafe_allow_html=True)
+        
+        # Show what task is running if loaded from DB separate from selection
+        if st.session_state.get('timer_running') and st.session_state.get('timer_task_id'):
+            # Find task name
+            active_t_name = next((t['title'] for t in tasks if t['id'] == st.session_state['timer_task_id']), "Unknown Task")
+            st.markdown(f"<div style='text-align:center; color:#9CA3AF; font-size:0.9rem;'>Running: <b>{active_t_name}</b></div>", unsafe_allow_html=True)
 
         # Display timer using JavaScript component (smooth, no lag)
         if "🍅" in timer_mode:
@@ -246,6 +278,8 @@ def render_timer_page():
         # Timer Controls
         do_save = False
         final_elapsed = 0
+        pom_mins = st.session_state.get('pomodoro_minutes', 25)
+        mode_str = "pomodoro" if "🍅" in timer_mode else "stopwatch"
 
         st.write("") # Spacer
 
@@ -259,6 +293,14 @@ def render_timer_page():
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = selected_task_id
                         st.session_state['timer_subtask_id'] = selected_subtask_id
+                        
+                        # Save to DB
+                        db.save_active_timer(
+                            user_id, selected_task_id, 
+                            st.session_state['timer_start'].isoformat(), 
+                            0, True, mode_str, pom_mins, selected_subtask_id
+                        )
+                        st.session_state['db_synced'] = True
                         st.rerun()
             else:
                 # State 3: Paused - Resume | Stop | Reset
@@ -267,6 +309,16 @@ def render_timer_page():
                     if st.button("▶ Resume", use_container_width=True, type="primary"):
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
+                        
+                        # Update DB
+                        db.save_active_timer(
+                            user_id, st.session_state.get('timer_task_id', selected_task_id), 
+                            st.session_state['timer_start'].isoformat(), 
+                            st.session_state['timer_paused_elapsed'], 
+                            True, mode_str, pom_mins, 
+                            st.session_state.get('timer_subtask_id')
+                        )
+                        st.session_state['db_synced'] = True
                         st.rerun()
                 with col_stop:
                     if st.button("⏹ Stop & Save", use_container_width=True):
@@ -276,6 +328,8 @@ def render_timer_page():
                     if st.button("Reset", use_container_width=True):
                         st.session_state['timer_paused_elapsed'] = 0
                         st.session_state['timer_elapsed'] = 0
+                        db.delete_active_timer(user_id) # Clear DB
+                        st.session_state['db_synced'] = False
                         st.rerun()
         else:
             # State 2: Running - Pause | Stop
@@ -291,6 +345,15 @@ def render_timer_page():
                     st.session_state['timer_running'] = False
                     st.session_state['timer_paused_elapsed'] = current_elapsed
                     st.session_state['timer_start'] = None
+                    
+                    # Update DB (save pause state)
+                    db.save_active_timer(
+                        user_id, st.session_state.get('timer_task_id', selected_task_id), 
+                        "", # No start time because paused
+                        current_elapsed, 
+                        False, mode_str, pom_mins, 
+                        st.session_state.get('timer_subtask_id')
+                    )
                     st.rerun()
             with col_stop:
                 if st.button("⏹ Stop & Save", use_container_width=True, type="primary"):
@@ -303,9 +366,18 @@ def render_timer_page():
                     do_save = True
 
         if do_save:
+            # Clean up DB
+            db.delete_active_timer(user_id)
+            st.session_state['db_synced'] = False
+            
             # Save the time log with exact duration
             minutes_spent = final_elapsed / 60
             task_id = st.session_state.get('timer_task_id', selected_task_id)
+            subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
+
+            db.add_time_log(
+                user_id=user_id,
+                task_id=task_id,
             subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
 
             db.add_time_log(

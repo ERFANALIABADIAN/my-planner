@@ -250,6 +250,18 @@ SCHEMA_SQL = """
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
         FOREIGN KEY (subtask_id) REFERENCES subtasks(id) ON DELETE SET NULL
     );
+    CREATE TABLE IF NOT EXISTS active_timers (
+        user_id INTEGER PRIMARY KEY,
+        task_id INTEGER,
+        subtask_id INTEGER,
+        start_time TEXT,
+        paused_elapsed REAL DEFAULT 0,
+        is_running INTEGER DEFAULT 0,
+        mode TEXT DEFAULT 'stopwatch',
+        pomodoro_minutes INTEGER DEFAULT 25,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
     CREATE INDEX IF NOT EXISTS idx_time_logs_date ON time_logs(log_date);
     CREATE INDEX IF NOT EXISTS idx_time_logs_user ON time_logs(user_id);
     CREATE INDEX IF NOT EXISTS idx_time_logs_task ON time_logs(task_id);
@@ -729,3 +741,45 @@ else:
             total = result['total']
             return float(total) if total else 0
         return 0
+
+
+# ─── Active Timer Persistence ────────────────────────────────────────────────
+
+def get_active_timer(user_id: int):
+    """Retrieve active timer state for a user."""
+    return _query("SELECT * FROM active_timers WHERE user_id = ?", [user_id], fetch="one")
+
+
+def save_active_timer(user_id: int, task_id: int, start_time: str, paused_elapsed: float, is_running: bool, mode: str, pomodoro_minutes: int, subtask_id: int = None):
+    """Upsert active timer state."""
+    # SQLite UPSERT
+    sql = """
+    INSERT INTO active_timers (user_id, task_id, subtask_id, start_time, paused_elapsed, is_running, mode, pomodoro_minutes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET
+        task_id=excluded.task_id,
+        subtask_id=excluded.subtask_id,
+        start_time=excluded.start_time,
+        paused_elapsed=excluded.paused_elapsed,
+        is_running=excluded.is_running,
+        mode=excluded.mode,
+        pomodoro_minutes=excluded.pomodoro_minutes,
+        last_updated=CURRENT_TIMESTAMP
+    """
+    if USE_TURSO:
+        # Turso/libsql supports UPSERT too
+        params = [user_id, task_id, subtask_id, start_time, paused_elapsed, 1 if is_running else 0, mode, pomodoro_minutes]
+        _turso_execute(sql, params, "none")
+    else:
+        with get_connection() as conn:
+            params = [user_id, task_id, subtask_id, start_time, paused_elapsed, 1 if is_running else 0, mode, pomodoro_minutes]
+            conn.execute(sql, params)
+
+
+def delete_active_timer(user_id: int):
+    """Clear active timer state."""
+    if USE_TURSO:
+        _turso_execute("DELETE FROM active_timers WHERE user_id = ?", [user_id], "none")
+    else:
+        with get_connection() as conn:
+            conn.execute("DELETE FROM active_timers WHERE user_id = ?", [user_id])
