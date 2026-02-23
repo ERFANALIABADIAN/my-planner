@@ -183,6 +183,18 @@ def render_timer_page():
         if correct_sub_label:
             st.session_state['timer_subtask_select'] = correct_sub_label
 
+    # Render the interactive timer dashboard as a fragment for high performance
+    _render_timer_dashboard(user_id, tasks, task_options)
+
+    # ─── Today's Sessions ─────────────────────────────────────
+    st.markdown("---")
+    st.markdown("### 📊 Today's Sessions")
+
+
+@st.fragment
+def _render_timer_dashboard(user_id, tasks, task_options):
+    """Fragment-based timer dashboard for snappy UI updates without full page refreshes."""
+    
     # ─── Timer Configuration ──────────────────────────────────
     col_config, col_timer = st.columns([1, 1])
 
@@ -226,6 +238,7 @@ def render_timer_page():
         if "🍅" in timer_mode:
             preset_col1, preset_col2, preset_col3 = st.columns(3)
             with preset_col1:
+                # Type primary if minutes match
                 if st.button("25 min", use_container_width=True,
                              type="primary" if st.session_state.get('pomodoro_minutes', 25) == 25 else "secondary"):
                     st.session_state['pomodoro_minutes'] = 25
@@ -246,10 +259,6 @@ def render_timer_page():
             st.session_state['pomodoro_minutes'] = pomodoro_min
 
     with col_timer:
-        # ── Session keepalive: auto-refresh every 3 min ONLY when timer is running ──
-        # if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
-        #     st_autorefresh(interval=180_000, key="timer_keepalive")
-
         # Calculate elapsed time
         if st.session_state['timer_running'] and st.session_state['timer_start']:
             elapsed = st.session_state['timer_paused_elapsed'] + \
@@ -269,7 +278,8 @@ def render_timer_page():
             st.markdown(f"<div style='text-align:center; color:#9CA3AF; font-size:0.9rem;'>Running: <b>{active_t_name}</b></div>", unsafe_allow_html=True)
 
         # Display timer using JavaScript component (smooth, no lag)
-        if "🍅" in timer_mode:
+        mode_str = "pomodoro" if "🍅" in timer_mode else "stopwatch"
+        if mode_str == "pomodoro":
             total_seconds = st.session_state.get('pomodoro_minutes', 25) * 60
             js_timer_component(
                 elapsed_seconds=elapsed,
@@ -288,7 +298,6 @@ def render_timer_page():
         do_save = False
         final_elapsed = 0
         pom_mins = st.session_state.get('pomodoro_minutes', 25)
-        mode_str = "pomodoro" if "🍅" in timer_mode else "stopwatch"
 
         st.write("") # Spacer
 
@@ -310,7 +319,7 @@ def render_timer_page():
                             0, True, mode_str, pom_mins, selected_subtask_id
                         )
                         st.session_state['db_synced'] = True
-                        st.rerun() # Rerun to reflect state change immediately
+                        # st.rerun() # NO RERUN - Fragment handles display change naturally
             else:
                 # State 3: Paused - Resume | Stop | Reset
                 col_resume, col_stop, col_reset = st.columns(3)
@@ -328,9 +337,9 @@ def render_timer_page():
                             st.session_state.get('timer_subtask_id')
                         )
                         st.session_state['db_synced'] = True
-                        st.rerun() # Rerun to reflect resume state immediately
+                        # st.rerun() # NO RERUN
                 with col_stop:
-                    if st.button("⏹ Stop & Save", use_container_width=True):
+                    if st.button("⏹ Stop & Save", use_container_width=True, key="stop_paused"):
                         final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
                         do_save = True
                 with col_reset:
@@ -339,7 +348,7 @@ def render_timer_page():
                         st.session_state['timer_elapsed'] = 0
                         db.delete_active_timer(user_id) # Clear DB
                         st.session_state['db_synced'] = False
-                        st.rerun() # Rerun to reflect reset immediately
+                        # st.rerun() # NO RERUN
         else:
             # State 2: Running - Pause | Stop
             col_pause, col_stop = st.columns(2)
@@ -363,10 +372,10 @@ def render_timer_page():
                         False, mode_str, pom_mins, 
                         st.session_state.get('timer_subtask_id')
                     )
-                    st.rerun() # Rerun to reflect pause state immediately
+                    # st.rerun() # NO RERUN
 
             with col_stop:
-                if st.button("⏹ Stop & Save", use_container_width=True, type="primary"):
+                if st.button("⏹ Stop & Save", use_container_width=True, type="primary", key="stop_running"):
                     # CRITICAL: Recalculate elapsed time RIGHT NOW for accuracy
                     if st.session_state['timer_start']:
                         final_elapsed = st.session_state['timer_paused_elapsed'] + \
@@ -401,25 +410,15 @@ def render_timer_page():
             st.session_state['timer_paused_elapsed'] = 0
             st.session_state['timer_elapsed'] = 0
 
-            # Show exact time saved
-            hours = int(final_elapsed // 3600)
-            mins = int((final_elapsed % 3600) // 60)
-            secs = int(final_elapsed % 60)
-            if hours > 0:
-                time_str = f"{hours}h {mins}m {secs}s"
-            elif mins > 0:
-                time_str = f"{mins}m {secs}s"
-            else:
-                time_str = f"{secs}s"
-            saved_task_name = next((t['title'] for t in tasks if t['id'] == task_id), "Unknown Task")
-            saved_sub_name = ""
-            if subtask_id:
-                _subs = db.get_subtasks(task_id)
-                _sub = next((s for s in _subs if s['id'] == subtask_id), None)
-                if _sub:
-                    saved_sub_name = f" → {_sub['title']}"
-            st.success(f"✅ Saved {time_str} for **{saved_task_name}**{saved_sub_name}")
-            st.rerun() # Rerun to reset timer UI immediately
+            # Feedback
+            hrs = int(final_elapsed // 3600)
+            ms = int((final_elapsed % 3600) // 60)
+            ss = int(final_elapsed % 60)
+            t_str = f"{hrs}h {ms}m {ss}s" if hrs > 0 else (f"{ms}m {ss}s" if ms > 0 else f"{ss}s")
+            st.toast(f"✅ Saved {t_str}!", icon="⏱️")
+
+            # FULL RERUN to update the Today's Sessions list below the fragment
+            st.rerun()
 
 
     # No auto-refresh needed - JavaScript timer handles live display
