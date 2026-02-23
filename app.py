@@ -297,6 +297,41 @@ st.markdown(f"""
     [data-baseweb="textarea"] textarea::placeholder {{
         color: {_muted} !important;
     }}
+    
+    /* Popover & Icon Picker Fixes */
+    /* 1. The trigger button (showing current icon) */
+    [data-testid="stPopover"] > button {{
+        background-color: {_input} !important;
+        color: {_text} !important;
+        border: 1px solid {_border} !important;
+        min-height: 2.5rem; /* Match height of color picker/inputs */
+        width: 100%;
+        display: flex; align-items: center; justify-content: center;
+    }}
+    /* 2. The popover container (content window) */
+    [data-baseweb="popover"] > div, 
+    [data-baseweb="popover"] > div > div {{
+        background-color: {_surface} !important;
+        border: 1px solid {_border} !important;
+    }}
+    /* 3. The icon buttons grid inside the popover */
+    [data-baseweb="popover"] button {{
+        background-color: {_surface2} !important;
+        color: {_text} !important; 
+        border: 1px solid {_border} !important;
+        margin: 2px !important;
+        transition: transform 0.1s;
+    }}
+    [data-baseweb="popover"] button:hover {{
+        border-color: {_accent} !important;
+        transform: scale(1.1);
+        z-index: 10;
+        background-color: {_surface} !important;
+    }}
+    [data-baseweb="popover"] [data-testid="stMarkdownContainer"] p {{
+        color: {_text} !important;
+    }}
+
     /* Mobile */
     @media (max-width: 768px) {{
         [data-testid="stMetricValue"] {{ font-size: 1.2rem !important; }}
