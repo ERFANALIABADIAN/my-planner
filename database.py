@@ -484,6 +484,7 @@ def add_time_log(user_id: int, task_id: int, duration_minutes: float,
     if HAS_STREAMLIT:
         get_time_logs.clear()
         get_daily_summary.clear()
+        get_tasks.clear()  # Clear tasks cache because total_time is now embedded
         get_weekly_summary.clear()
         get_monthly_summary.clear()
         get_daily_trend.clear()
@@ -551,6 +552,7 @@ def delete_time_log(log_id: int):
     if HAS_STREAMLIT:
         get_time_logs.clear()
         get_daily_summary.clear()
+        get_tasks.clear()  # Clear tasks cache because total_time is now embedded
         get_weekly_summary.clear()
         get_monthly_summary.clear()
         get_daily_trend.clear()

@@ -180,16 +180,24 @@ def render_tasks_page():
         with st.form("new_task_form", clear_on_submit=True):
             task_title = st.text_input("Task Title", placeholder="What do you need to do?")
             task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
-            task_cat = st.selectbox(
-                "Category",
-                options=[c['id'] for c in categories],
-                format_func=lambda x: next(
-                    f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+            col_cat, col_goal = st.columns([2, 1])
+            with col_cat:
+                task_cat = st.selectbox(
+                    "Category",
+                    options=[c['id'] for c in categories],
+                    format_func=lambda x: next(
+                        f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+                    )
                 )
-            )
+            with col_goal:
+                task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+
             if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
                 if task_title.strip():
-                    db.create_task(user_id, task_cat, task_title.strip(), task_desc.strip())
+                    db.create_task(
+                        user_id, task_cat, task_title.strip(), 
+                        task_desc.strip(), goal_minutes=task_goal*60
+                    )
                     st.success(f"Task added!")
                     st.rerun()
                 else:
@@ -248,20 +256,22 @@ def render_tasks_page():
                 
                 # Progress bar only when a goal has been set
                 if goal_minutes > 0:
-                    pct = min(total_time / goal_minutes, 1.0)
-                    pct_display = int(pct * 100)
+                    raw_pct = total_time / goal_minutes
+                    bar_pct = min(raw_pct, 1.0)
+                    pct_display = int(raw_pct * 100)
                     
                     # Display goal explicitly as requested
                     goal_h = goal_minutes / 60.0
                     passed_h = total_time / 60.0
                     
                     # Use custom HTML for better visibility of goal info
+                    color = "#EF4444" if raw_pct > 1.0 else _muted_col
                     st.markdown(f"""
-                    <div style="font-size:0.75rem; color:{_muted_col}; margin-bottom:2px;">
+                    <div style="font-size:0.75rem; color:{color}; margin-bottom:2px;">
                         Goal: <b>{goal_h:g}h</b> &nbsp;•&nbsp; {pct_display}%
                     </div>
                     """, unsafe_allow_html=True)
-                    st.progress(pct)
+                    st.progress(bar_pct)
                     
                 elif subtasks:
                     # Show subtask completion bar only (no goal)

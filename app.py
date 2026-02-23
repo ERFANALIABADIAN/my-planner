@@ -78,14 +78,21 @@ st.markdown(f"""
 
     /* Card-like containers */
     [data-testid="stExpander"] {{
-        background: {_surface} !important;
+        background-color: {_surface} !important;
         border: 1px solid {_border} !important;
-        border-radius: 12px; margin-bottom: 0.5rem;
+        border-radius: 12px; margin-bottom: 0.5rem; color: {_text} !important;
     }}
     [data-testid="stExpander"] summary {{ color: {_head} !important; }}
+    [data-testid="stExpander"] details {{ background-color: {_surface} !important; }}
+    [data-testid="stExpander"] > div:first-child {{ background-color: {_surface} !important; }}
+    
     /* Expander arrow icon */
     [data-testid="stExpander"] summary svg {{
         fill: {_text} !important; color: {_text} !important;
+    }}
+    /* Radio buttons & Checkboxes labels */
+    .stRadio label, .stCheckbox label {{
+        color: {_text} !important;
     }}
     /* All SVG icons: arrows, chevrons, dropdowns, selects */
     svg {{ fill: {_text} !important; color: {_text} !important; }}
