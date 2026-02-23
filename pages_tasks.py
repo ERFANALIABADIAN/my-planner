@@ -170,7 +170,6 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
 def _render_log_time_section(user_id, task_id, task_title):
     """Log Time panel helper (called within task fragment)."""
     _log_key = f'log_open_{task_id}'
-    # Only close log panel on navigation if not already set
     if _log_key not in st.session_state:
         st.session_state[_log_key] = False
     _log_open = st.session_state[_log_key]
