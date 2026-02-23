@@ -75,20 +75,23 @@ def render_tasks_page():
         st.markdown("### 📁 Categories")
 
         with st.expander("➕ New Category", expanded=False):
+        with st.expander("➕ New Category", expanded=False):
             cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
             
-            # Compact layout: Icon Popover + Color Picker
-            col_icon, col_color = st.columns([1, 3])
+            # Compact layout: Icon Popover + Color Picker side-by-side
+            # Using columns to align them
+            # Using a custom container to force alignment since labels cause offset
+            col_icon, col_color = st.columns([1, 4], gap="small")
             
             picked = st.session_state.get('new_cat_icon', '📁')
 
             with col_icon:
-                st.markdown("**Icon**")
-                # Popover replaces the old expander/list
+                # Use caption instead of markdown for label to match size
+                st.caption("Icon")
+                # Popover is just the button here
                 popover = st.popover(picked, use_container_width=True)
                 with popover:
                     st.markdown("### Choose Icon")
-                    # Display icons in a grid inside the popover
                     cols = st.columns(5)
                     for i, icon in enumerate(ICONS):
                         with cols[i % 5]:
@@ -97,6 +100,8 @@ def render_tasks_page():
                                 st.rerun()
 
             with col_color:
+                # Color picker handles its own label, we just need to ensure vertical alignment
+                # The label "Color" is inside the widget. 
                 cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
 
             st.write("") # Spacer
