@@ -221,6 +221,7 @@ SCHEMA_SQL = """
         status TEXT DEFAULT 'active',
         priority INTEGER DEFAULT 0,
         sort_order INTEGER DEFAULT 0,
+        goal_minutes REAL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -264,9 +265,20 @@ SCHEMA_SQL = """
 def init_db():
     if USE_TURSO:
         _turso_executescript(SCHEMA_SQL)
+        # Migration: add goal_minutes if missing
+        try:
+            _turso_execute("ALTER TABLE tasks ADD COLUMN goal_minutes REAL DEFAULT 0", [], "none")
+        except Exception:
+            pass
     else:
         with get_connection() as conn:
             conn.executescript(SCHEMA_SQL)
+            # Migration: add goal_minutes column for existing databases
+            try:
+                conn.execute("ALTER TABLE tasks ADD COLUMN goal_minutes REAL DEFAULT 0")
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
 
 # ─── Universal Query Executor ──────────────────────────────────────────────────
@@ -381,12 +393,12 @@ else:
         return _query(query, params)
 
 
-def create_task(user_id: int, category_id: int, title: str, description: str = ""):
+def create_task(user_id: int, category_id: int, title: str, description: str = "", goal_minutes: float = 0):
     if HAS_STREAMLIT:
         get_tasks.clear()
     return _query(
-        "INSERT INTO tasks (user_id, category_id, title, description) VALUES (?, ?, ?, ?)",
-        [user_id, category_id, title, description], fetch="lastrowid"
+        "INSERT INTO tasks (user_id, category_id, title, description, goal_minutes) VALUES (?, ?, ?, ?, ?)",
+        [user_id, category_id, title, description, goal_minutes], fetch="lastrowid"
     )
 
 

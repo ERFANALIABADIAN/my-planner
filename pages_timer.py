@@ -364,7 +364,7 @@ def render_timer_page():
                 if log['note']:
                     st.caption(log['note'])
             with col_dur:
-                source_icon = "⏱" if log['source'] == 'timer' else "✏️"
+                source_icon = "⏱"  # always use timer icon (removed pencil ✏️)
                 # Display minutes and seconds for accurate time display
                 total_seconds = int(log['duration_minutes'] * 60)
                 hours = total_seconds // 3600

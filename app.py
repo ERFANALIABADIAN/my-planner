@@ -83,6 +83,37 @@ st.markdown(f"""
         border-radius: 12px; margin-bottom: 0.5rem;
     }}
     [data-testid="stExpander"] summary {{ color: {_head} !important; }}
+    /* Expander arrow icon */
+    [data-testid="stExpander"] summary svg {{
+        fill: {_text} !important; color: {_text} !important;
+    }}
+    /* All SVG icons: arrows, chevrons, dropdowns, selects */
+    svg {{ fill: {_text} !important; color: {_text} !important; }}
+    /* Selectbox dropdown text and arrow */
+    [data-baseweb="select"] > div {{
+        background-color: {_input} !important;
+        border-color: {_border} !important;
+        color: {_text} !important;
+    }}
+    [data-baseweb="select"] [data-testid="stMarkdownContainer"],
+    [data-baseweb="select"] span, [data-baseweb="select"] div {{
+        color: {_text} !important;
+    }}
+    [data-baseweb="select"] svg path {{
+        fill: {_text} !important;
+    }}
+    /* Selectbox popup/menu */
+    [data-baseweb="popover"] ul {{
+        background-color: {_surface} !important;
+        border-color: {_border} !important;
+    }}
+    [data-baseweb="popover"] li {{
+        background-color: {_surface} !important;
+        color: {_text} !important;
+    }}
+    [data-baseweb="popover"] li:hover {{
+        background-color: {_surface2} !important;
+    }}
     /* Buttons */
     .stButton > button {{
         border-radius: 8px; font-weight: 500; transition: all 0.2s ease;
@@ -165,15 +196,22 @@ st.markdown(f"""
     .stNumberInput > div > div > input {{
         background-color: {_input} !important; color: {_text} !important;
         border: 1px solid {_border} !important; border-radius: 8px;
+        caret-color: {_text} !important;
+    }}
+    .stTextInput > div > div > input::placeholder,
+    .stTextArea > div > div > textarea::placeholder {{
+        color: {_muted} !important;
     }}
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus {{
         border-color: {_accent} !important;
         box-shadow: 0 0 0 2px {_accent}33 !important;
     }}
-    .stSelectbox > div > div {{
-        background-color: {_input} !important; color: {_text} !important;
-        border: 1px solid {_border} !important;
+    /* Number input +/- buttons */
+    .stNumberInput button {{ color: {_text} !important; background: {_input} !important; border-color: {_border} !important; }}
+    /* Date input */
+    .stDateInput > div > div > input {{
+        background-color: {_input} !important; color: {_text} !important; border-color: {_border} !important;
     }}
     /* Mobile */
     @media (max-width: 768px) {{

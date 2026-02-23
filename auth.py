@@ -73,11 +73,25 @@ def render_login_page():
 
     st.markdown("""
     <style>
-        /* ── Remove ALL page-transition animations on login ── */
+        /* ── Full-screen login overlay ─────────────────────────── */
+        /* Covers any stale app content that might show through    */
+        [data-testid="stAppViewContainer"]::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: var(--login-bg, #F5F7FA);
+            z-index: 100;
+        }
+        /* Bring the main block above the overlay                  */
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"] {
+            position: relative;
+            z-index: 200;
+        }
+        /* ── Kill ALL page-enter animations ────────────────────── */
         .stApp, .stApp > *, .main, .main > *,
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"],
-        [data-testid="stMainBlockContainer"],
         section.main > div {
             animation: none !important;
             transition: none !important;
@@ -85,30 +99,17 @@ def render_login_page():
             filter: none !important;
             opacity: 1 !important;
         }
-        /* Hide the sidebar completely on the login page */
-        section[data-testid="stSidebar"] {
-            display: none !important;
-        }
-        [data-testid="collapsedControl"] {
-            display: none !important;
-        }
-        .login-container {
-            max-width: 420px;
-            margin: 0 auto;
-            padding: 2rem 1rem;
-        }
+        /* ── Hide sidebar on login ──────────────────────────────── */
+        section[data-testid="stSidebar"] { display: none !important; }
+        [data-testid="collapsedControl"]  { display: none !important; }
+        /* ── Login card styling ─────────────────────────────────── */
         .login-title {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #1E1E2E;
-            margin-bottom: 0.5rem;
+            text-align: center; font-size: 2.5rem;
+            font-weight: 700; color: #1E1E2E; margin-bottom: 0.5rem;
         }
         .login-subtitle {
-            text-align: center;
-            color: #6B7280;
-            margin-bottom: 2rem;
-            font-size: 1rem;
+            text-align: center; color: #6B7280;
+            margin-bottom: 2rem; font-size: 1rem;
         }
     </style>
     """, unsafe_allow_html=True)

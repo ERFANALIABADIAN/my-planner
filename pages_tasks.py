@@ -46,6 +46,12 @@ def format_minutes(minutes: float) -> str:
 def render_tasks_page():
     user_id = st.session_state['user_id']
     categories = db.get_categories(user_id)
+    # ── Theme-aware colors ──────────────────────────────────
+    _dark = st.session_state.get('theme', 'light') == 'dark'
+    _card_bg   = "#1E2130" if _dark else "#FFFFFF"
+    _done_bg   = "#0C2D21" if _dark else "#F0FFF4"
+    _text_col  = "#E5E7EB" if _dark else "#374151"
+    _muted_col = "#9CA3AF"
 
     # ─── Sidebar: Category Management ─────────────────────────
     with st.sidebar:
@@ -93,11 +99,14 @@ def render_tasks_page():
                         use_container_width=True,
                         type=btn_style
                     ):
-                        # Toggle filter: click same category again to deselect
+                        # Toggle filter; also sync the main dropdown widget
                         if is_active:
                             st.session_state.pop('filter_cat_id', None)
+                            st.session_state['main_cat_filter'] = "All Categories"
                         else:
                             st.session_state['filter_cat_id'] = cat['id']
+                            # Set dropdown key to matching label so it shows selected
+                            st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
                         st.rerun()
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
@@ -116,7 +125,6 @@ def render_tasks_page():
         return
 
     # ─ Filter bar (synced with sidebar category selection) ─
-    # Sync sidebar selection => dropdown
     sidebar_cat_id = st.session_state.get('filter_cat_id', None)
 
     col_filter, col_status = st.columns([3, 2])
@@ -124,19 +132,16 @@ def render_tasks_page():
         cat_options = {"All Categories": None}
         for c in categories:
             cat_options[f"{c['icon']} {c['name']}"] = c['id']
-        # Find the default index based on sidebar selection
         keys_list = list(cat_options.keys())
-        vals_list = list(cat_options.values())
-        default_idx = vals_list.index(sidebar_cat_id) if sidebar_cat_id in vals_list else 0
+        # Let Streamlit manage state via key; sidebar sets the key directly
         selected_cat_name = st.selectbox(
             "Filter by Category",
             options=keys_list,
-            index=default_idx,
             label_visibility="collapsed",
             key="main_cat_filter"
         )
         selected_cat_id = cat_options[selected_cat_name]
-        # Keep sidebar in sync when dropdown changes
+        # Sync dropdown → sidebar
         if selected_cat_id != sidebar_cat_id:
             if selected_cat_id is None:
                 st.session_state.pop('filter_cat_id', None)
@@ -191,13 +196,14 @@ def render_tasks_page():
 
         is_completed = task['status'] == 'completed'
         border_color = task['category_color']
+        goal_minutes = task.get('goal_minutes') or 0
 
         with st.container():
             st.markdown(
                 f"""<div style='border-left: 4px solid {border_color}; padding: 0.5rem 1rem;
                      margin-bottom: 0.5rem; border-radius: 0 8px 8px 0;
-                     background: {"#F0FFF4" if is_completed else "#FFFFFF"};
-                     opacity: {"0.7" if is_completed else "1"};'>
+                     background: {"#0C2D21" if (_dark and is_completed) else ("#F0FFF4" if is_completed else (_card_bg))};
+                     opacity: {"0.75" if is_completed else "1"}; color: {_text_col};'>
                 </div>""",
                 unsafe_allow_html=True
             )
@@ -216,8 +222,16 @@ def render_tasks_page():
 
             with col_time:
                 st.markdown(f"⏱ **{format_minutes(total_time)}**")
-                if subtasks:
-                    st.progress(progress, text=f"{done_count}/{len(subtasks)}")
+                # Progress bar only when a goal has been set
+                if goal_minutes > 0:
+                    pct = min(total_time / goal_minutes, 1.0)
+                    pct_display = int(pct * 100)
+                    bar_label = f"{format_minutes(total_time)} / {format_minutes(goal_minutes)} ({pct_display}%)"
+                    st.progress(pct, text=bar_label)
+                elif subtasks:
+                    # Show subtask completion bar only (no goal)
+                    sub_pct = done_count / len(subtasks) if subtasks else 0
+                    st.progress(sub_pct, text=f"{done_count}/{len(subtasks)} subtasks")
 
             with col_actions:
                 # All action buttons are borderless (icon-only)
@@ -253,10 +267,16 @@ def render_tasks_page():
                         ),
                         key=f"edit_cat_{task['id']}"
                     )
+                    curr_goal_h = (task.get('goal_minutes') or 0) / 60
+                    new_goal_h = st.number_input(
+                        "Goal Hours (0 = no goal)",
+                        min_value=0.0, max_value=10000.0, value=float(curr_goal_h), step=0.5
+                    )
                     col_save, col_cancel = st.columns(2)
                     with col_save:
                         if st.form_submit_button("Save", type="primary", use_container_width=True):
-                            db.update_task(task['id'], title=new_title, description=new_desc, category_id=new_cat)
+                            db.update_task(task['id'], title=new_title, description=new_desc,
+                                           category_id=new_cat, goal_minutes=new_goal_h * 60)
                             st.session_state.pop(f'editing_task_{task["id"]}', None)
                             st.rerun()
                     with col_cancel:
@@ -267,17 +287,25 @@ def render_tasks_page():
             # ─── Subtasks ──────────────────────────────────
             sub_label = f"Subtasks ({done_count}/{len(subtasks)})" if subtasks else "Add Subtasks"
             with st.expander(sub_label, expanded=False):
-                # Align checkbox with text at same vertical level
+                # Flex-center so checkbox aligns with adjacent text
                 st.markdown("""
                 <style>
-                [data-testid="stCheckbox"] { margin-bottom:0 !important; padding-bottom:0 !important; }
-                [data-testid="stCheckbox"] > label { padding-top:0.3rem !important; }
+                div[data-testid="stCheckbox"] {
+                    padding: 0 !important; margin: 0 !important;
+                }
+                div[data-testid="stCheckbox"] > label {
+                    display: flex !important; align-items: center !important;
+                    gap: 0.5rem !important; padding: 0 !important;
+                    min-height: 1.8rem !important;
+                }
+                div[data-testid="column"]:has(div[data-testid="stCheckbox"]) {
+                    display: flex !important; align-items: center !important;
+                }
                 </style>""", unsafe_allow_html=True)
 
                 for sub in subtasks:
                     col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
                     with col_check:
-                        # on_change fires immediately – no manual comparison or rerun needed
                         st.checkbox(
                             "done", value=bool(sub['is_done']),
                             key=f"sub_{sub['id']}",
@@ -286,9 +314,11 @@ def render_tasks_page():
                             args=(sub['id'],)
                         )
                     with col_name:
-                        style = "text-decoration:line-through; color:#9CA3AF;" if sub['is_done'] else ""
+                        strike = "line-through" if sub['is_done'] else "none"
+                        color  = _muted_col if sub['is_done'] else _text_col
                         st.markdown(
-                            f"<p style='margin:0; padding-top:0.3rem; {style}'>{sub['title']}</p>",
+                            f"<div style='display:flex; align-items:center; min-height:1.8rem;"
+                            f" text-decoration:{strike}; color:{color};'>{sub['title']}</div>",
                             unsafe_allow_html=True
                         )
                     with col_sub_del:
@@ -340,7 +370,8 @@ def render_tasks_page():
                             log_date.isoformat(),
                             log_note, "manual"
                         )
-                        st.success(f"Logged {format_minutes(log_mins)}!")
+                        # Use toast: small floating notification, no layout disruption
+                        st.toast(f"\u2705 Logged {format_minutes(log_mins)} for '{task['title']}'", icon="\u23f1")
                         st.rerun()
 
             st.divider()
