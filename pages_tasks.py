@@ -163,7 +163,8 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                 if st.button("➕", key=f"add_sub_{task_id}"):
                     if new_sub_title.strip():
                         db.create_subtask(task_id, new_sub_title.strip())
-                        st.session_state[new_sub_key] = ""  # Clear input after add
+                        # Clear input after add
+                        st.session_state.pop(new_sub_key, None)
                         st.rerun()  # Fragment rerun
 
 
@@ -217,18 +218,21 @@ def _render_log_time_section(user_id, task_id, task_title):
             with col_add:
                 # Use tertiary button with inline saving
                 if st.button("💾", key=f"save_log_{task_id}"):
+                    minutes = st.session_state[f'_log_min_local_{task_id}']
                     db.add_time_log(
-                        user_id, task_id, st.session_state[f'_log_min_local_{task_id}'],
+                        user_id, task_id, minutes,
                         st.session_state[f'_log_date_local_{task_id}'].isoformat(),
                         st.session_state[f'_log_note_local_{task_id}'], "manual"
                     )
-                    st.toast(f"✅ Logged {format_minutes(st.session_state[f'_log_min_local_{task_id}'])} for '{task_title}'", icon="⏱")
+                    # Close panel and show success message
+                    st.session_state[_log_key] = False
                     # Reset local fields
                     st.session_state[f'_log_min_local_{task_id}'] = 25
                     st.session_state[f'_log_date_local_{task_id}'] = date.today()
                     st.session_state[f'_log_note_local_{task_id}'] = ""
-                    # Natural rerun will re-render fragment with updated data
-                    st.rerun() # Ensure close/update logic applies immediately
+                    # Show clear success like other sections
+                    st.success(f"✅ Logged {format_minutes(minutes)} for '{task_title}'")
+                    st.rerun() # Ensure UI reflects saved data immediately
 
         
 
@@ -445,7 +449,7 @@ def render_tasks_page():
     # If we're entering the Tasks page from another page, reset any open panels
     if not st.session_state.get('_tasks_initialized', False):
         for k in list(st.session_state.keys()):
-            if k.startswith('sub_open_') or k.startswith('log_open_') or k.startswith('new_sub_'):
+            if k.startswith('sub_open_') or k.startswith('log_open_'):
                 st.session_state[k] = False
         st.session_state['_tasks_initialized'] = True
     
