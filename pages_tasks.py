@@ -154,9 +154,9 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
                 new_sub_key = f"new_sub_{task_id}"
-                new_sub_title = st.session_state.get(new_sub_key, "")
+                # Let the widget manage its own value via `key` so clearing session state works reliably
                 new_sub_title = st.text_input(
-                    "New subtask", value=new_sub_title, placeholder="Add a subtask...",
+                    "New subtask", placeholder="Add a subtask...",
                     key=new_sub_key, label_visibility="collapsed"
                 )
             with col_add_sub:
