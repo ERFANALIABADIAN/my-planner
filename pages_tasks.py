@@ -588,6 +588,9 @@ def render_tasks_page():
         )
         return
 
+    # Ensure sidebar category selection syncs to main page
+    st.experimental_rerun()
+
     for task in tasks:
         # Render each task as an isolated fragment for high performance
         _render_task_item(task['id'], user_id, categories, _text_col, _muted_col, _card_bg, _done_bg)
