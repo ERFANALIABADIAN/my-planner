@@ -228,7 +228,6 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.session_state[f'_log_date_local_{task_id}'] = date.today()
                     st.session_state[f'_log_note_local_{task_id}'] = ""
                     # Natural rerun will re-render fragment with updated data
-                    st.session_state['force_close_log'] = True
                     st.rerun() # Ensure close/update logic applies immediately
 
         
