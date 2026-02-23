@@ -387,55 +387,53 @@ def _render_add_task_form(user_id, categories, selected_cat_id):
         st.session_state['add_task_open'] = False
     _at_open = st.session_state['add_task_open']
 
-    with st.container():
-        # Toggle button - NO explicit rerun needed for fragment update
-        if st.button(
-            "▼ ➕ Add New Task" if _at_open else "➕ Add New Task",
-            key="btn_toggle_add_task",
-            use_container_width=True,
-            type="secondary"
-        ):
-            st.session_state['add_task_open'] = not _at_open
-            st.rerun()  # Fragment rerun
+    # Toggle button - NO explicit rerun needed for fragment update
+    if st.button(
+        "▼ ➕ Add New Task" if _at_open else "➕ Add New Task",
+        key="btn_toggle_add_task",
+        use_container_width=True,
+        type="secondary"
+    ):
+        st.session_state['add_task_open'] = not _at_open
+        st.rerun()  # Fragment rerun
 
-        if _at_open:
-            with st.form("new_task_form", clear_on_submit=True):
-                task_title = st.text_input("Task Title", placeholder="What do you need to do?")
-                task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
+    if st.session_state['add_task_open']:
+        with st.form("new_task_form", clear_on_submit=True):
+            task_title = st.text_input("Task Title", placeholder="What do you need to do?")
+            task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
 
-                # If a category filter is active, use it; otherwise show dropdown
-                preselected_cat_id = selected_cat_id
+            # If a category filter is active, use it; otherwise show dropdown
+            preselected_cat_id = selected_cat_id
 
-                if preselected_cat_id:
-                    task_cat = preselected_cat_id
-                    col_goal_only = st.columns([1])[0]
-                    with col_goal_only:
-                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+            if preselected_cat_id:
+                task_cat = preselected_cat_id
+                col_goal_only = st.columns([1])[0]
+                with col_goal_only:
+                    task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+            else:
+                col_cat, col_goal = st.columns([2, 1])
+                with col_cat:
+                    task_cat = st.selectbox(
+                        "Category",
+                        options=[c['id'] for c in categories],
+                        format_func=lambda x: next(
+                            f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
+                        )
+                    )
+                with col_goal:
+                    task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
+
+            if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
+                if task_title.strip():
+                    db.create_task(
+                        user_id, task_cat, task_title.strip(),
+                        task_desc.strip(), goal_minutes=task_goal*60
+                    )
+                    st.success(f"Task added!")
+                    st.session_state['add_task_open'] = False  # auto-close
+                    st.rerun()  # FULL App rerun needed to update task list
                 else:
-                    col_cat, col_goal = st.columns([2, 1])
-                    with col_cat:
-                        task_cat = st.selectbox(
-                            "Category",
-                            options=[c['id'] for c in categories],
-                            format_func=lambda x: next(
-                                f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
-                            )
-                        )
-                    with col_goal:
-                        task_goal = st.number_input("Goal Hours (Optional)", min_value=0.0, step=0.5, value=0.0)
-
-                if st.form_submit_button("Add Task", use_container_width=True, type="primary"):
-                    if task_title.strip():
-                        db.create_task(
-                            user_id, task_cat, task_title.strip(),
-                            task_desc.strip(), goal_minutes=task_goal*60
-                        )
-                        st.success(f"Task added!")
-                        st.session_state['add_task_open'] = False  # auto-close
-                        st.rerun()  # FULL App rerun needed to update task list
-                    else:
-                        st.warning("Enter a task title.")
-
+                    st.warning("Enter a task title.")
 
 
 def format_minutes(minutes: float) -> str:
