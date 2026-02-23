@@ -513,13 +513,15 @@ def render_tasks_page():
                         use_container_width=True,
                         type=btn_style
                     ):
-                        # Toggle filter; also sync the main dropdown widget
+                        # Toggle filter; also sync the main dropdown widget and immediately rerun
                         if is_active:
                             st.session_state.pop('filter_cat_id', None)
                             st.session_state['main_cat_filter'] = "All Categories"
                         else:
                             st.session_state['filter_cat_id'] = cat['id']
                             st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
+                        # Ensure the UI updates immediately to reflect the new selection
+                        st.rerun()
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])
@@ -588,8 +590,8 @@ def render_tasks_page():
         )
         return
 
-    # Ensure sidebar category selection syncs to main page
-    st.experimental_rerun()
+    # Sidebar-to-main immediate sync is handled in the button click handler;
+    # remove any unconditional rerun to avoid double-rerun behavior.
 
     for task in tasks:
         # Render each task as an isolated fragment for high performance
