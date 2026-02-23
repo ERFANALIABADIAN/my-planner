@@ -90,6 +90,121 @@ def _render_sidebar_new_category(user_id, text_col):
 
 
 @st.fragment
+def _render_subtask_section(task_id, subtasks, text_col, muted_col):
+    """Fragment: Subtasks panel — reruns only itself when toggled."""
+    sub_label = f"Subtasks ({sum(1 for s in subtasks if s['is_done'])}/{len(subtasks)})" if subtasks else "Add Subtasks"
+    _sub_key = f'sub_open_{task_id}'
+    if _sub_key not in st.session_state:
+        st.session_state[_sub_key] = False
+    _sub_open = st.session_state[_sub_key]
+
+    with st.container(border=True):
+        if st.button(
+            ("▼ " if _sub_open else "") + sub_label,
+            key=f"btn_toggle_sub_{task_id}",
+            use_container_width=True,
+            type="secondary"
+        ):
+            st.session_state[_sub_key] = not _sub_open
+            st.rerun()  # Fragment rerun
+
+        if _sub_open:
+            st.markdown("""
+            <style>
+            div[data-testid="stCheckbox"] { padding: 0 !important; margin: 0 !important; }
+            div[data-testid="stCheckbox"] > label {
+                display: flex !important; align-items: center !important;
+                gap: 0.5rem !important; padding: 0 !important; min-height: 1.8rem !important;
+            }
+            div[data-testid="column"]:has(div[data-testid="stCheckbox"]) {
+                display: flex !important; align-items: center !important;
+            }
+            </style>""", unsafe_allow_html=True)
+
+            for sub in subtasks:
+                col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
+                with col_check:
+                    st.checkbox(
+                        "done", value=bool(sub['is_done']),
+                        key=f"sub_{sub['id']}",
+                        label_visibility="collapsed",
+                        on_change=_subtask_toggle_cb,
+                        args=(sub['id'],)
+                    )
+                with col_name:
+                    strike = "line-through" if sub['is_done'] else "none"
+                    color  = muted_col if sub['is_done'] else text_col
+                    st.markdown(
+                        f"<div style='display:flex; align-items:center; min-height:1.8rem;"
+                        f" text-decoration:{strike}; color:{color};'>{sub['title']}</div>",
+                        unsafe_allow_html=True
+                    )
+                with col_sub_del:
+                    if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
+                        db.delete_subtask(sub['id'])
+                        st.rerun()  # Full rerun to refresh subtask list
+
+            col_new_sub, col_add_sub = st.columns([5, 1])
+            with col_new_sub:
+                new_sub_title = st.text_input(
+                    "New subtask", placeholder="Add a subtask...",
+                    key=f"new_sub_{task_id}", label_visibility="collapsed"
+                )
+            with col_add_sub:
+                if st.button("➕", key=f"add_sub_{task_id}"):
+                    if new_sub_title.strip():
+                        db.create_subtask(task_id, new_sub_title.strip())
+                        st.session_state[_sub_key] = False  # auto-close
+                        st.rerun()  # Full rerun to refresh subtask list
+
+
+@st.fragment
+def _render_log_time_section(user_id, task_id, task_title):
+    """Fragment: Log Time panel — reruns only itself when toggled."""
+    _log_key = f'log_open_{task_id}'
+    if _log_key not in st.session_state:
+        st.session_state[_log_key] = False
+    _log_open = st.session_state[_log_key]
+
+    with st.container(border=True):
+        if st.button(
+            "▼ ⏱ Log Time" if _log_open else "⏱ Log Time",
+            key=f"btn_toggle_log_{task_id}",
+            use_container_width=True,
+            type="secondary"
+        ):
+            st.session_state[_log_key] = not _log_open
+            st.rerun()  # Fragment rerun
+
+        if _log_open:
+            col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
+            with col_dur:
+                log_mins = st.number_input(
+                    "Minutes", min_value=1, value=25,
+                    key=f"log_min_{task_id}", label_visibility="collapsed"
+                )
+            with col_date:
+                log_date = st.date_input(
+                    "Date", value=date.today(),
+                    key=f"log_date_{task_id}", label_visibility="collapsed"
+                )
+            with col_note:
+                log_note = st.text_input(
+                    "Note", placeholder="What did you work on?",
+                    key=f"log_note_{task_id}", label_visibility="collapsed"
+                )
+            with col_add:
+                if st.button("💾", key=f"save_log_{task_id}"):
+                    db.add_time_log(
+                        user_id, task_id, log_mins,
+                        log_date.isoformat(), log_note, "manual"
+                    )
+                    st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task_title}'", icon="⏱")
+                    st.session_state[_log_key] = False  # auto-close
+                    st.rerun()
+
+
+@st.fragment
 def _render_add_task_form(user_id, categories, selected_cat_id):
     """Fragment for Add Task form to allow fast toggling."""
     if 'add_task_open' not in st.session_state:
@@ -390,124 +505,9 @@ def render_tasks_page():
                             st.session_state.pop(f'editing_task_{task["id"]}', None)
                             st.rerun()
 
-            # ─── Subtasks ──────────────────────────────────
-            sub_label = f"Subtasks ({done_count}/{len(subtasks)})" if subtasks else "Add Subtasks"
-            _sub_key = f'sub_open_{task["id"]}'
-            if _sub_key not in st.session_state:
-                st.session_state[_sub_key] = False
-            _sub_open = st.session_state[_sub_key]
+        # ─── Subtasks & Log Time ── rendered OUTSIDE the task container
+        # so they match the full page width (same as Add New Task button)
+        _render_subtask_section(task['id'], subtasks, _text_col, _muted_col)
+        _render_log_time_section(user_id, task['id'], task['title'])
 
-            with st.container(border=True):
-                if st.button(
-                    ("▼ " if _sub_open else "") + sub_label,
-                    key=f"btn_toggle_sub_{task['id']}",
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    st.session_state[_sub_key] = not _sub_open
-                    st.rerun()
-
-                if _sub_open:
-                    st.markdown("""
-                    <style>
-                    div[data-testid="stCheckbox"] {
-                        padding: 0 !important; margin: 0 !important;
-                    }
-                    div[data-testid="stCheckbox"] > label {
-                        display: flex !important; align-items: center !important;
-                        gap: 0.5rem !important; padding: 0 !important;
-                        min-height: 1.8rem !important;
-                    }
-                    div[data-testid="column"]:has(div[data-testid="stCheckbox"]) {
-                        display: flex !important; align-items: center !important;
-                    }
-                    </style>""", unsafe_allow_html=True)
-
-                    for sub in subtasks:
-                        col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
-                        with col_check:
-                            st.checkbox(
-                                "done", value=bool(sub['is_done']),
-                                key=f"sub_{sub['id']}",
-                                label_visibility="collapsed",
-                                on_change=_subtask_toggle_cb,
-                                args=(sub['id'],)
-                            )
-                        with col_name:
-                            strike = "line-through" if sub['is_done'] else "none"
-                            color  = _muted_col if sub['is_done'] else _text_col
-                            st.markdown(
-                                f"<div style='display:flex; align-items:center; min-height:1.8rem;"
-                                f" text-decoration:{strike}; color:{color};'>{sub['title']}</div>",
-                                unsafe_allow_html=True
-                            )
-                        with col_sub_del:
-                            if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
-                                db.delete_subtask(sub['id'])
-                                st.rerun()
-
-                    # Add subtask
-                    col_new_sub, col_add_sub = st.columns([5, 1])
-                    with col_new_sub:
-                        new_sub_title = st.text_input(
-                            "New subtask",
-                            placeholder="Add a subtask...",
-                            key=f"new_sub_{task['id']}",
-                            label_visibility="collapsed"
-                        )
-                    with col_add_sub:
-                        if st.button("➕", key=f"add_sub_{task['id']}"):
-                            if new_sub_title.strip():
-                                db.create_subtask(task['id'], new_sub_title.strip())
-                                st.session_state[_sub_key] = False  # auto-close
-                                st.rerun()
-
-            # ─── Quick Time Log ────────────────────────────
-            _log_key = f'log_open_{task["id"]}'
-            if _log_key not in st.session_state:
-                st.session_state[_log_key] = False
-            _log_open = st.session_state[_log_key]
-
-            with st.container(border=True):
-                if st.button(
-                    "▼ ⏱ Log Time" if _log_open else "⏱ Log Time",
-                    key=f"btn_toggle_log_{task['id']}",
-                    use_container_width=True,
-                    type="secondary"
-                ):
-                    st.session_state[_log_key] = not _log_open
-                    st.rerun()
-
-                if _log_open:
-                    col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
-                    with col_dur:
-                        log_mins = st.number_input(
-                            "Minutes", min_value=1, value=25,
-                            key=f"log_min_{task['id']}",
-                            label_visibility="collapsed"
-                        )
-                    with col_date:
-                        log_date = st.date_input(
-                            "Date", value=date.today(),
-                            key=f"log_date_{task['id']}",
-                            label_visibility="collapsed"
-                        )
-                    with col_note:
-                        log_note = st.text_input(
-                            "Note", placeholder="What did you work on?",
-                            key=f"log_note_{task['id']}",
-                            label_visibility="collapsed"
-                        )
-                    with col_add:
-                        if st.button("💾", key=f"save_log_{task['id']}"):
-                            db.add_time_log(
-                                user_id, task['id'],
-                                log_mins,
-                                log_date.isoformat(),
-                                log_note, "manual"
-                            )
-                            st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task['title']}'", icon="⏱")
-                            st.session_state[_log_key] = False  # auto-close
-                            st.rerun()
-
-            st.divider()
+        st.divider()
