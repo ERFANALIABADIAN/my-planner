@@ -365,9 +365,14 @@ def delete_category(cat_id: int):
 if HAS_STREAMLIT:
     @st.cache_data(ttl=20, show_spinner=False)
     def get_tasks(user_id: int, category_id: int = None, status: str = None):
-        query = """SELECT t.*, c.name as category_name, c.color as category_color,
-                   c.icon as category_icon FROM tasks t
-                   JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"""
+        query = """
+            SELECT t.*, 
+                   c.name as category_name, c.color as category_color, c.icon as category_icon,
+                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+            FROM tasks t
+            JOIN categories c ON t.category_id = c.id 
+            WHERE t.user_id = ?
+        """
         params = [user_id]
         if category_id:
             query += " AND t.category_id = ?"
@@ -379,9 +384,14 @@ if HAS_STREAMLIT:
         return _query(query, params)
 else:
     def get_tasks(user_id: int, category_id: int = None, status: str = None):
-        query = """SELECT t.*, c.name as category_name, c.color as category_color,
-                   c.icon as category_icon FROM tasks t
-                   JOIN categories c ON t.category_id = c.id WHERE t.user_id = ?"""
+        query = """
+            SELECT t.*, 
+                   c.name as category_name, c.color as category_color, c.icon as category_icon,
+                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+            FROM tasks t
+            JOIN categories c ON t.category_id = c.id 
+            WHERE t.user_id = ?
+        """
         params = [user_id]
         if category_id:
             query += " AND t.category_id = ?"

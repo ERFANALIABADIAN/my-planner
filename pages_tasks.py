@@ -52,6 +52,23 @@ def render_tasks_page():
     _done_bg   = "#0C2D21" if _dark else "#F0FFF4"
     _text_col  = "#E5E7EB" if _dark else "#374151"
     _muted_col = "#9CA3AF"
+    
+    # Fix dark mode styles for expanders inside tasks
+    st.markdown(f"""
+    <style>
+    div[data-testid="stExpander"] {{
+        background-color: {_card_bg} !important;
+        border: 1px solid {_muted_col}40 !important;
+        color: {_text_col} !important;
+    }}
+    div[data-testid="stExpander"] > details > summary {{
+        color: {_text_col} !important;
+    }}
+    div[data-testid="stExpander"] > details > summary svg {{
+        fill: {_text_col} !important; color: {_text_col} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
 
     # ─── Sidebar: Category Management ─────────────────────────
     with st.sidebar:
@@ -132,21 +149,25 @@ def render_tasks_page():
         cat_options = {"All Categories": None}
         for c in categories:
             cat_options[f"{c['icon']} {c['name']}"] = c['id']
-        keys_list = list(cat_options.keys())
-        # Let Streamlit manage state via key; sidebar sets the key directly
+        
+        # Ensure 'main_cat_filter' in session_state matches sidebar_cat_id
+        if 'main_cat_filter' not in st.session_state:
+            st.session_state['main_cat_filter'] = "All Categories"
+        
         selected_cat_name = st.selectbox(
             "Filter by Category",
-            options=keys_list,
+            options=list(cat_options.keys()),
             label_visibility="collapsed",
             key="main_cat_filter"
         )
         selected_cat_id = cat_options[selected_cat_name]
+
         # Sync dropdown → sidebar
+        # If user changed dropdown, update filter_cat_id and rerun to update sidebar highlighting
         if selected_cat_id != sidebar_cat_id:
-            if selected_cat_id is None:
-                st.session_state.pop('filter_cat_id', None)
-            else:
-                st.session_state['filter_cat_id'] = selected_cat_id
+            st.session_state['filter_cat_id'] = selected_cat_id
+            st.rerun()
+
     with col_status:
         status_filter = st.selectbox(
             "Status",
@@ -189,7 +210,9 @@ def render_tasks_page():
         return
 
     for task in tasks:
-        total_time = db.get_task_total_time(task['id'])
+        # Optimized: retrieve pre-fetched total_time from query
+        total_time = task.get('total_time', 0)
+        
         subtasks = db.get_subtasks(task['id'])
         done_count = sum(1 for s in subtasks if s['is_done'])
         progress = done_count / len(subtasks) if subtasks else 0
@@ -222,16 +245,29 @@ def render_tasks_page():
 
             with col_time:
                 st.markdown(f"⏱ **{format_minutes(total_time)}**")
+                
                 # Progress bar only when a goal has been set
                 if goal_minutes > 0:
                     pct = min(total_time / goal_minutes, 1.0)
                     pct_display = int(pct * 100)
-                    bar_label = f"{format_minutes(total_time)} / {format_minutes(goal_minutes)} ({pct_display}%)"
-                    st.progress(pct, text=bar_label)
+                    
+                    # Display goal explicitly as requested
+                    goal_h = goal_minutes / 60.0
+                    passed_h = total_time / 60.0
+                    
+                    # Use custom HTML for better visibility of goal info
+                    st.markdown(f"""
+                    <div style="font-size:0.75rem; color:{_muted_col}; margin-bottom:2px;">
+                        Goal: <b>{goal_h:g}h</b> &nbsp;•&nbsp; {pct_display}%
+                    </div>
+                    """, unsafe_allow_html=True)
+                    st.progress(pct)
+                    
                 elif subtasks:
                     # Show subtask completion bar only (no goal)
                     sub_pct = done_count / len(subtasks) if subtasks else 0
-                    st.progress(sub_pct, text=f"{done_count}/{len(subtasks)} subtasks")
+                    st.caption(f"{done_count}/{len(subtasks)} subtasks")
+                    st.progress(sub_pct)
 
             with col_actions:
                 # All action buttons are borderless (icon-only)

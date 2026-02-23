@@ -30,6 +30,12 @@ def format_seconds(seconds: int) -> str:
 def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stopwatch", total_seconds: int = 0):
     """Render a JavaScript-based live timer that counts without page refresh.
     Also embeds a silent keepalive fetch so the Streamlit session never idles out."""
+    
+    # Check theme for text color
+    is_dark = st.session_state.get('theme', 'light') == 'dark'
+    text_color = "#E0E0E0" if is_dark else "#1E1E2E"
+    sub_text_color = "#A0A0A0" if is_dark else "#6B7280"
+
     keepalive_js = """
         // Keepalive: ping the health endpoint every 90s to prevent session timeout
         setInterval(function() {
@@ -38,11 +44,11 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
     """ if is_running else ""
     timer_html = f"""
     <div id="timer-container" style="text-align:center; padding:1.5rem 0;">
-        <div id="timer-display" style="font-size:4rem; font-weight:800; color:#1E1E2E;
+        <div id="timer-display" style="font-size:4rem; font-weight:800; color:{text_color};
              font-family:'Courier New', monospace; letter-spacing:0.2rem; user-select:none;">
             00:00
         </div>
-        <div id="timer-status" style="margin-top:0.5rem; font-size:0.85rem; color:#6B7280;"></div>
+        <div id="timer-status" style="margin-top:0.5rem; font-size:0.85rem; color:{sub_text_color};"></div>
     </div>
     <script>
         (function() {{
@@ -51,6 +57,7 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
             var mode = "{mode}";
             var totalSeconds = {total_seconds};
             var startTime = Date.now();
+            var defaultTextColor = "{text_color}";
 
             function formatTime(sec) {{
                 sec = Math.max(0, Math.floor(sec));
@@ -78,13 +85,14 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
                 if (mode === 'pomodoro') {{
                     var remaining = Math.max(0, totalSeconds - current);
                     display.textContent = formatTime(remaining);
-                    display.style.color = remaining === 0 ? '#EF4444' : '#1E1E2E';
+                    display.style.color = remaining === 0 ? '#EF4444' : defaultTextColor;
                     if (remaining === 0 && isRunning) {{
                         status.textContent = '🍅 Time is up!';
                         status.style.color = '#EF4444';
                     }}
                 }} else {{
                     display.textContent = formatTime(current);
+                    display.style.color = defaultTextColor;
                 }}
 
                 if (isRunning) {{
