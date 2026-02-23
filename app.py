@@ -352,15 +352,7 @@ with st.sidebar:
             st.session_state['current_page'] = page_key
             st.rerun()
 
-    # Push logout to bottom using spacer
     st.markdown("---")
-    st.markdown("<div style='height: 48vh'></div>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    # Logout
-    if st.button("🚪 Logout", use_container_width=True):
-        logout_user()
-        st.rerun()
 
 
 # ─── Page Router ──────────────────────────────────────────────
@@ -372,3 +364,15 @@ elif current_page == 'timer':
     render_timer_page()
 elif current_page == 'analytics':
     render_analytics_page()
+
+# ─── Sidebar Footer (Logout) ──────────────────────────────────
+with st.sidebar:
+    # Push logout to bottom using spacer
+    # Adjust height based on content to keep footer at bottom
+    st.markdown("<div style='height: 40vh'></div>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    # Logout
+    if st.button("🚪 Logout", use_container_width=True):
+        logout_user()
+        st.rerun()
