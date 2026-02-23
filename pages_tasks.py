@@ -296,7 +296,7 @@ def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg
                     options=[c['id'] for c in categories],
                     index=next((i for i, c in enumerate(categories) if c['id'] == task['category_id']), 0),
                     format_func=lambda x: next(
-                        f"{c['icon']} {c['name']}" for c in categories if c['id'] == x, "Unknown"
+                        (f"{c['icon']} {c['name']}" for c in categories if c['id'] == x), "Unknown"
                     ),
                     key=f"edit_cat_{task['id']}"
                 )
