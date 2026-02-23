@@ -352,6 +352,9 @@ with st.sidebar:
             st.session_state['current_page'] = page_key
             st.rerun()
 
+    # Push logout to bottom using spacer
+    st.markdown("---")
+    st.markdown("<div style='height: 48vh'></div>", unsafe_allow_html=True)
     st.markdown("---")
 
     # Logout

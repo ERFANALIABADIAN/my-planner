@@ -76,26 +76,31 @@ def render_tasks_page():
 
         with st.expander("➕ New Category", expanded=False):
             cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
-
-            # Icon picker - collapsed by default
+            
+            # Compact layout: Icon Popover + Color Picker
+            col_icon, col_color = st.columns([1, 3])
+            
             picked = st.session_state.get('new_cat_icon', '📁')
-            
-            # Show current selection
-            col_icon_show, col_picker_toggle = st.columns([1, 4])
-            with col_icon_show:
-                st.markdown(f"**Icon:** &nbsp; <span style='font-size:1.5rem;'>{picked}</span>", unsafe_allow_html=True)
-            
-            # Expander for picking other icons
-            with st.expander("Choose Icon", expanded=False):
-                icon_cols = st.columns(9)
-                for idx, ico in enumerate(ICONS):
-                    with icon_cols[idx % 9]:
-                        btn_type = "primary" if ico == picked else "secondary"
-                        if st.button(ico, key=f"ico_{idx}", type=btn_type):
-                            st.session_state['new_cat_icon'] = ico
-                            st.rerun()
 
-            cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
+            with col_icon:
+                st.markdown("**Icon**")
+                # Popover replaces the old expander/list
+                popover = st.popover(picked, use_container_width=True)
+                with popover:
+                    st.markdown("### Choose Icon")
+                    # Display icons in a grid inside the popover
+                    cols = st.columns(5)
+                    for i, icon in enumerate(ICONS):
+                        with cols[i % 5]:
+                            if st.button(icon, key=f"icon_select_{i}", use_container_width=True):
+                                st.session_state['new_cat_icon'] = icon
+                                st.rerun()
+
+            with col_color:
+                cat_color = st.color_picker("Color", value="#4A90D9", key="new_cat_color")
+
+            st.write("") # Spacer
+
             if st.button("Create", use_container_width=True, type="primary", key="create_cat_btn"):
                 if cat_name.strip():
                     try:
