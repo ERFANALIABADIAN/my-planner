@@ -109,7 +109,7 @@ def render_analytics_page():
             if st.button("◀ Prev Week", key="prev_week"):
                 st.session_state['week_offset'] = st.session_state.get('week_offset', 0) - 1
         with col_nav3:
-            if st.button("Next Week ▶", key="next_week"):
+            if st.button("Next Week", key="next_week"):
                 st.session_state['week_offset'] = min(0, st.session_state.get('week_offset', 0) + 1)
 
         offset = st.session_state.get('week_offset', 0)

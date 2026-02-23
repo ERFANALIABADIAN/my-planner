@@ -445,9 +445,9 @@ with st.sidebar:
 
     col_refresh, col_logout = st.sidebar.columns(2)
     with col_refresh:
-        if st.button("🔄 Refresh", use_container_width=True, help="Reload data"):
+        if st.button("🔄 Refresh", use_container_width=True, type="secondary", help="Reload data"):
             st.rerun()
     with col_logout:
-        if st.button("🚪 Logout", use_container_width=True):
+        if st.button("🚪 Logout", use_container_width=True, type="secondary"):
             logout_user()
             st.rerun()

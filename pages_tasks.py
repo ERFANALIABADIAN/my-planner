@@ -79,7 +79,7 @@ def render_tasks_page():
             st.session_state['new_cat_open'] = False
         _nc_open = st.session_state['new_cat_open']
         if st.button(
-            "▼ ➕ New Category" if _nc_open else "▶ ➕ New Category",
+            "▼ ➕ New Category" if _nc_open else "➕ New Category",
             key="btn_toggle_new_cat",
             use_container_width=True,
             type="secondary"
@@ -211,7 +211,7 @@ def render_tasks_page():
 
     with st.container(border=True):
         if st.button(
-            "▼ ➕ Add New Task" if _at_open else "▶ ➕ Add New Task",
+            "▼ ➕ Add New Task" if _at_open else "➕ Add New Task",
             key="btn_toggle_add_task",
             use_container_width=True,
             type="secondary"
@@ -384,7 +384,7 @@ def render_tasks_page():
 
             with st.container(border=True):
                 if st.button(
-                    ("▼ " if _sub_open else "▶ ") + sub_label,
+                    ("▼ " if _sub_open else "") + sub_label,
                     key=f"btn_toggle_sub_{task['id']}",
                     use_container_width=True,
                     type="secondary"
@@ -455,7 +455,7 @@ def render_tasks_page():
 
             with st.container(border=True):
                 if st.button(
-                    "▼ ⏱ Log Time" if _log_open else "▶ ⏱ Log Time",
+                    "▼ ⏱ Log Time" if _log_open else "⏱ Log Time",
                     key=f"btn_toggle_log_{task['id']}",
                     use_container_width=True,
                     type="secondary"

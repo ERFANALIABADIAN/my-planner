@@ -286,7 +286,7 @@ def render_timer_page():
                 # State 1: Not started - Centered Start Button
                 _, col_center, _ = st.columns([1, 2, 1])
                 with col_center:
-                    if st.button("▶ Start", use_container_width=True, type="primary"):
+                    if st.button("Start", use_container_width=True, type="primary"):
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = selected_task_id
@@ -304,7 +304,7 @@ def render_timer_page():
                 # State 3: Paused - Resume | Stop | Reset
                 col_resume, col_stop, col_reset = st.columns(3)
                 with col_resume:
-                    if st.button("▶ Resume", use_container_width=True, type="primary"):
+                    if st.button("Resume", use_container_width=True, type="primary"):
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
                         
