@@ -268,9 +268,34 @@ st.markdown(f"""
     label[data-testid="stWidgetLabel"] {{
         color: {_text} !important;
     }}
-    /* Date input */
-    .stDateInput > div > div > input {{
+    /* Date input - all layers */
+    .stDateInput > div > div > input,
+    div[data-testid="stDateInput"] input {{
         background-color: {_input} !important; color: {_text} !important; border-color: {_border} !important;
+    }}
+    div[data-testid="stDateInput"] > div,
+    div[data-testid="stDateInput"] [data-baseweb="input"],
+    div[data-testid="stDateInput"] [data-baseweb="base-input"] {{
+        background-color: {_input} !important;
+        border-color: {_border} !important;
+    }}
+    /* Universal baseweb input fix for all fields in dark mode */
+    [data-baseweb="input"],
+    [data-baseweb="base-input"],
+    [data-baseweb="textarea"] {{
+        background-color: {_input} !important;
+        border-color: {_border} !important;
+        color: {_text} !important;
+    }}
+    [data-baseweb="input"] input,
+    [data-baseweb="base-input"] input,
+    [data-baseweb="input"] textarea {{
+        background-color: {_input} !important;
+        color: {_text} !important;
+    }}
+    [data-baseweb="input"] input::placeholder,
+    [data-baseweb="textarea"] textarea::placeholder {{
+        color: {_muted} !important;
     }}
     /* Mobile */
     @media (max-width: 768px) {{
