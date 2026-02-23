@@ -172,6 +172,12 @@ st.markdown(f"""
         border: 1px solid {_border} !important;
         color: {_text} !important;
     }}
+    /* Sidebar secondary buttons – override Streamlit's sidebar default white */
+    [data-testid="stSidebar"] .stButton > button[kind="secondary"] {{
+        background-color: {_surface2} !important;
+        border: 1px solid {_border} !important;
+        color: {_text} !important;
+    }}
 
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{
