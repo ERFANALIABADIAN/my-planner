@@ -75,7 +75,6 @@ def render_tasks_page():
         st.markdown("### 📁 Categories")
 
         with st.expander("➕ New Category", expanded=False):
-        with st.expander("➕ New Category", expanded=False):
             cat_name = st.text_input("Name", placeholder="e.g. Programming", key="new_cat_name")
             
             # Compact layout: Icon Popover + Color Picker side-by-side
