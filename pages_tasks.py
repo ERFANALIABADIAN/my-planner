@@ -5,6 +5,7 @@ Tasks page - Category & Task management with subtasks.
 import streamlit as st
 from datetime import date
 import database as db
+import time
 
 # ─── Icon picker options ────────────────────────────────────────────
 ICONS = [
@@ -18,7 +19,7 @@ ICONS = [
 
 
 def _subtask_toggle_cb(sub_id: int, task_id: int):
-    """Callback executed when a subtask checkbox changes. Updates DB without closing."""
+    """Callback executed when a subtask checkbox changes. Reset activity timer."""
     db.toggle_subtask(sub_id)
     # Invalidate caches
     try:
@@ -28,8 +29,8 @@ def _subtask_toggle_cb(sub_id: int, task_id: int):
     except Exception:
         pass
     
-    # Do NOT auto-close subtask window (User requested to keep it open)
-    # st.session_state[f'sub_open_{task_id}'] = False  <-- Removed
+    # Reset the auto-close timer when user interacts
+    st.session_state[f'subtask_timer_{task_id}'] = time.time()
 
 
 
@@ -114,6 +115,11 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             st.rerun()  # Fragment rerun
 
         if _sub_open:
+            # Initialize auto-close timer on first open
+            timer_key = f'subtask_timer_{task_id}'
+            if timer_key not in st.session_state:
+                st.session_state[timer_key] = time.time()
+            
             st.markdown("""
             <style>
             div[data-testid="stCheckbox"] { padding: 0 !important; margin: 0 !important; }
@@ -162,6 +168,12 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         db.create_subtask(task_id, new_sub_title.strip())
                         st.session_state[_sub_key] = False  # auto-close
                         st.rerun()  # Fragment rerun
+            
+            # Auto-close subtask window after 2 seconds of inactivity
+            elapsed = time.time() - st.session_state[timer_key]
+            if elapsed > 2:
+                st.session_state[_sub_key] = False
+                st.rerun()  # Close the subtask window
 
 
 def _render_log_time_section(user_id, task_id, task_title):
