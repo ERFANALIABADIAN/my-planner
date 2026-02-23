@@ -549,17 +549,9 @@ def render_tasks_page():
         for c in categories:
             cat_options[f"{c['icon']} {c['name']}"] = c['id']
         
-        # Ensure 'main_cat_filter' in session_state exists
+        # Ensure 'main_cat_filter' in session_state matches sidebar_cat_id
         if 'main_cat_filter' not in st.session_state:
             st.session_state['main_cat_filter'] = "All Categories"
-
-        # If a sidebar category filter is active, make sure the main selectbox shows the same label
-        sidebar_filter = st.session_state.get('filter_cat_id')
-        if sidebar_filter is not None:
-            # Find matching label in cat_options and set it so both controls stay in sync
-            matching_label = next((lbl for lbl, cid in cat_options.items() if cid == sidebar_filter), None)
-            if matching_label:
-                st.session_state['main_cat_filter'] = matching_label
         
         # Callback to update filter_cat_id BEFORE restart
         def on_cat_change():
