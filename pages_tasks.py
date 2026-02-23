@@ -119,7 +119,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             timer_key = f'subtask_timer_{task_id}'
             if timer_key not in st.session_state:
                 st.session_state[timer_key] = time.time()
-            
+
             st.markdown("""
             <style>
             div[data-testid="stCheckbox"] { padding: 0 !important; margin: 0 !important; }
@@ -132,6 +132,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             }
             </style>""", unsafe_allow_html=True)
 
+            all_done = True
             for sub in subtasks:
                 col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
                 with col_check:
@@ -155,6 +156,8 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                         db.delete_subtask(sub['id'])
                         st.rerun()  # Fragment rerun
+                if not sub['is_done']:
+                    all_done = False
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
@@ -168,19 +171,26 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         db.create_subtask(task_id, new_sub_title.strip())
                         st.session_state[_sub_key] = False  # auto-close
                         st.rerun()  # Fragment rerun
-            
-            # Auto-close subtask window after 2 seconds of inactivity
-            elapsed = time.time() - st.session_state[timer_key]
-            if elapsed > 2:
+
+            # Auto-close logic
+            if all_done and subtasks:
                 st.session_state[_sub_key] = False
-                st.rerun()  # Close the subtask window
+                st.rerun()  # Instantly close if all checked
+            else:
+                elapsed = time.time() - st.session_state[timer_key]
+                if elapsed > 2:
+                    st.session_state[_sub_key] = False
+                    st.rerun()  # Close the subtask window
 
 
 def _render_log_time_section(user_id, task_id, task_title):
     """Log Time panel helper (called within task fragment)."""
     _log_key = f'log_open_{task_id}'
-    if _log_key not in st.session_state:
+    # Always close log panel on navigation unless just saved
+    if _log_key not in st.session_state or st.session_state.get('force_close_log', False):
         st.session_state[_log_key] = False
+        if 'force_close_log' in st.session_state:
+            del st.session_state['force_close_log']
     _log_open = st.session_state[_log_key]
 
     with st.container():
@@ -194,33 +204,51 @@ def _render_log_time_section(user_id, task_id, task_title):
             # No st.rerun() needed - button click naturally triggers fragment rerun
 
         if _log_open:
+            # Use local variables for log time fields to avoid rerun issues
+            if f'_log_min_local_{task_id}' not in st.session_state:
+                st.session_state[f'_log_min_local_{task_id}'] = 25
+            if f'_log_date_local_{task_id}' not in st.session_state:
+                st.session_state[f'_log_date_local_{task_id}'] = date.today()
+            if f'_log_note_local_{task_id}' not in st.session_state:
+                st.session_state[f'_log_note_local_{task_id}'] = ""
+
             col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
             with col_dur:
                 log_mins = st.number_input(
-                    "Minutes", min_value=1, value=25,
-                    key=f"log_min_{task_id}", label_visibility="collapsed"
+                    "Minutes", min_value=1, value=st.session_state[f'_log_min_local_{task_id}'],
+                    key=f"log_min_input_{task_id}", label_visibility="collapsed"
                 )
+                st.session_state[f'_log_min_local_{task_id}'] = log_mins
             with col_date:
                 log_date = st.date_input(
-                    "Date", value=date.today(),
-                    key=f"log_date_{task_id}", label_visibility="collapsed"
+                    "Date", value=st.session_state[f'_log_date_local_{task_id}'],
+                    key=f"log_date_input_{task_id}", label_visibility="collapsed"
                 )
+                st.session_state[f'_log_date_local_{task_id}'] = log_date
             with col_note:
                 log_note = st.text_input(
                     "Note", placeholder="What did you work on?",
-                    key=f"log_note_{task_id}", label_visibility="collapsed"
+                    value=st.session_state[f'_log_note_local_{task_id}'],
+                    key=f"log_note_input_{task_id}", label_visibility="collapsed"
                 )
+                st.session_state[f'_log_note_local_{task_id}'] = log_note
             with col_add:
                 # Use tertiary button with inline saving
                 if st.button("💾", key=f"save_log_{task_id}"):
                     db.add_time_log(
-                        user_id, task_id, log_mins,
-                        log_date.isoformat(), log_note, "manual"
+                        user_id, task_id, st.session_state[f'_log_min_local_{task_id}'],
+                        st.session_state[f'_log_date_local_{task_id}'].isoformat(),
+                        st.session_state[f'_log_note_local_{task_id}'], "manual"
                     )
-                    st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task_title}'", icon="⏱")
+                    st.toast(f"✅ Logged {format_minutes(st.session_state[f'_log_min_local_{task_id}'])} for '{task_title}'", icon="⏱")
                     st.session_state[_log_key] = False  # auto-close
+                    # Reset local fields
+                    st.session_state[f'_log_min_local_{task_id}'] = 25
+                    st.session_state[f'_log_date_local_{task_id}'] = date.today()
+                    st.session_state[f'_log_note_local_{task_id}'] = ""
                     # Natural rerun will re-render fragment with updated data
-                    st.rerun() # Restore rerun to ensure close/update logic applies immediately
+                    st.session_state['force_close_log'] = True
+                    st.rerun() # Ensure close/update logic applies immediately
 
         
 

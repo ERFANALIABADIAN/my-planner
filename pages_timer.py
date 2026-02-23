@@ -311,7 +311,6 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = selected_task_id
                         st.session_state['timer_subtask_id'] = selected_subtask_id
-                        
                         # Save to DB
                         db.save_active_timer(
                             user_id, selected_task_id, 
@@ -319,7 +318,7 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                             0, True, mode_str, pom_mins, selected_subtask_id
                         )
                         st.session_state['db_synced'] = True
-                        # st.rerun() # NO RERUN - Fragment handles display change naturally
+                        # No rerun needed; fragment will update UI instantly
             else:
                 # State 3: Paused - Resume | Stop | Reset
                 col_resume, col_stop, col_reset = st.columns(3)
