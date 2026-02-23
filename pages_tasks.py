@@ -453,7 +453,10 @@ def render_tasks_page():
                             st.session_state['filter_cat_id'] = cat['id']
                             # Set dropdown key to matching label so it shows selected
                             st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
-                        st.rerun()
+                        
+                        # Button click triggers rerun automatically.
+                        # Updating session state here ensures the next run sees the new filter.
+                        # No explicit st.rerun() needed.
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])
@@ -483,19 +486,20 @@ def render_tasks_page():
         if 'main_cat_filter' not in st.session_state:
             st.session_state['main_cat_filter'] = "All Categories"
         
+        # Callback to update filter_cat_id BEFORE restart
+        def on_cat_change():
+            sel = st.session_state['main_cat_filter']
+            st.session_state['filter_cat_id'] = cat_options.get(sel)
+
         selected_cat_name = st.selectbox(
             "Filter by Category",
             options=list(cat_options.keys()),
             label_visibility="collapsed",
-            key="main_cat_filter"
+            key="main_cat_filter",
+            on_change=on_cat_change
         )
-        selected_cat_id = cat_options[selected_cat_name]
+        selected_cat_id = cat_options[selected_cat_name] # Already synced via on_change
 
-        # Sync dropdown → sidebar
-        # If user changed dropdown, update filter_cat_id and rerun to update sidebar highlighting
-        if selected_cat_id != sidebar_cat_id:
-            st.session_state['filter_cat_id'] = selected_cat_id
-            st.rerun()
 
     with col_status:
         status_filter = st.selectbox(
