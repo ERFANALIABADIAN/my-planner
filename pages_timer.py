@@ -132,22 +132,58 @@ def render_timer_page():
         st.info("You need active tasks to use the timer. Go to Tasks page to create some!")
         return
 
+    # ─── Build task options BEFORE columns so we can use them for sync ───
+    task_options = {}
+    for t in tasks:
+        label = f"{t['category_icon']} {t['title']} ({t['category_name']})"
+        task_options[label] = t['id']
+
+    # ─── Initialize session state ─────────────────────────────────────────
+    if 'timer_running' not in st.session_state:
+        st.session_state['timer_running'] = False
+    if 'timer_start' not in st.session_state:
+        st.session_state['timer_start'] = None
+    if 'timer_elapsed' not in st.session_state:
+        st.session_state['timer_elapsed'] = 0
+    if 'timer_paused_elapsed' not in st.session_state:
+        st.session_state['timer_paused_elapsed'] = 0
+
+    # ─── Load + sync from DB (must run before columns so selectbox is correct) ──
+    active_timer_db = db.get_active_timer(user_id)
+    if active_timer_db and not st.session_state.get('db_synced'):
+        db_running = bool(active_timer_db['is_running'])
+        db_start = (datetime.fromisoformat(active_timer_db['start_time'])
+                    if active_timer_db['start_time'] else None)
+        st.session_state['timer_running']        = db_running
+        st.session_state['timer_start']          = db_start
+        st.session_state['timer_paused_elapsed'] = active_timer_db['paused_elapsed']
+        st.session_state['timer_task_id']        = active_timer_db['task_id']
+        st.session_state['timer_subtask_id']     = active_timer_db['subtask_id']
+        st.session_state['pomodoro_minutes']     = active_timer_db['pomodoro_minutes']
+        st.session_state['db_synced'] = True
+
+    # ─── Sync selectbox key → active task (timer running or paused) ─────────
+    # This must happen BEFORE st.selectbox() renders so the widget shows correctly.
+    active_task_id = st.session_state.get('timer_task_id')
+    if active_task_id and (st.session_state['timer_running']
+                           or st.session_state.get('timer_paused_elapsed', 0) > 0):
+        correct_label = next(
+            (lbl for lbl, tid in task_options.items() if tid == active_task_id), None
+        )
+        if correct_label:
+            st.session_state['timer_task_select'] = correct_label
+
     # ─── Timer Configuration ──────────────────────────────────
     col_config, col_timer = st.columns([1, 1])
 
     with col_config:
         st.markdown("### 🎯 Select Task")
 
-        # Group tasks by category  
-        task_options = {}
-        for t in tasks:
-            label = f"{t['category_icon']} {t['title']} ({t['category_name']})"
-            task_options[label] = t['id']
-
         selected_task_label = st.selectbox(
             "Task",
             options=list(task_options.keys()),
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key="timer_task_select"
         )
         selected_task_id = task_options[selected_task_label]
 
@@ -199,45 +235,7 @@ def render_timer_page():
             st.session_state['pomodoro_minutes'] = pomodoro_min
 
     with col_timer:
-        # ─── Load Active Timer from DB (Persistence) ────────────────────────
-        # Check if we have an active timer in DB that isn't in session yet or overrides it
-        active_timer_db = db.get_active_timer(user_id)
-        
-        # Initialize session state if not present
-        if 'timer_running' not in st.session_state:
-            st.session_state['timer_running'] = False
-        if 'timer_start' not in st.session_state:
-            st.session_state['timer_start'] = None
-        if 'timer_elapsed' not in st.session_state:
-            st.session_state['timer_elapsed'] = 0
-        if 'timer_paused_elapsed' not in st.session_state:
-            st.session_state['timer_paused_elapsed'] = 0
-
-        # Sync DB state to Session State if DB has a newer or valid state
-        if active_timer_db:
-            db_running = bool(active_timer_db['is_running'])
-            db_start = datetime.fromisoformat(active_timer_db['start_time']) if active_timer_db['start_time'] else None
-            db_paused = active_timer_db['paused_elapsed']
-            
-            # If our session is "empty" or out of sync, adopt DB state
-            # Logic: We trust the DB as the "source of truth" for cross-device/tab safety
-            if 'db_synced' not in st.session_state or not st.session_state['db_synced']:
-                st.session_state['timer_running'] = db_running
-                st.session_state['timer_start'] = db_start
-                st.session_state['timer_paused_elapsed'] = db_paused
-                st.session_state['timer_task_id'] = active_timer_db['task_id']
-                st.session_state['timer_subtask_id'] = active_timer_db['subtask_id']
-                st.session_state['pomodoro_minutes'] = active_timer_db['pomodoro_minutes']
-                
-                # Update the UI selectors to match the active task later if possible
-                # (Complex due to selectbox UI, but at least the timer runs correctly)
-                selected_task_id = active_timer_db['task_id'] 
-                
-                st.session_state['db_synced'] = True
-        
         # ── Session keepalive: auto-refresh every 3 min ONLY when timer is running ──
-        # Prevents Streamlit Cloud from killing the WebSocket connection (session wipe).
-        # timer_start stays in session_state so elapsed is always recomputed correctly.
         if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
             st_autorefresh(interval=180_000, key="timer_keepalive")
 
