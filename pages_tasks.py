@@ -230,8 +230,8 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.session_state[f'_log_min_local_{task_id}'] = 25
                     st.session_state[f'_log_date_local_{task_id}'] = date.today()
                     st.session_state[f'_log_note_local_{task_id}'] = ""
-                    # Show clear success like other sections
-                    st.success(f"✅ Logged {format_minutes(minutes)} for '{task_title}'")
+                    # Show toast in top-right like other sections
+                    st.toast(f"✅ Logged {format_minutes(minutes)} for '{task_title}'", icon="⏱")
                     st.rerun() # Ensure UI reflects saved data immediately
 
         
