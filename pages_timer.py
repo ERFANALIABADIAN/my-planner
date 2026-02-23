@@ -173,6 +173,16 @@ def render_timer_page():
         if correct_label:
             st.session_state['timer_task_select'] = correct_label
 
+    # ─── Sync subtask selectbox ───────────────────────────────────────────────
+    active_subtask_id = st.session_state.get('timer_subtask_id')
+    if active_task_id and active_subtask_id:
+        _active_subs = db.get_subtasks(active_task_id)
+        correct_sub_label = next(
+            (s['title'] for s in _active_subs if s['id'] == active_subtask_id), None
+        )
+        if correct_sub_label:
+            st.session_state['timer_subtask_select'] = correct_sub_label
+
     # ─── Timer Configuration ──────────────────────────────────
     col_config, col_timer = st.columns([1, 1])
 
@@ -198,7 +208,8 @@ def render_timer_page():
                     sub_options[s['title']] = s['id']
                 selected_sub_label = st.selectbox(
                     "Subtask (optional)",
-                    options=list(sub_options.keys())
+                    options=list(sub_options.keys()),
+                    key="timer_subtask_select"
                 )
                 selected_subtask_id = sub_options[selected_sub_label]
 
@@ -399,7 +410,14 @@ def render_timer_page():
                 time_str = f"{mins}m {secs}s"
             else:
                 time_str = f"{secs}s"
-            st.success(f"✅ Saved {time_str}!")
+            saved_task_name = next((t['title'] for t in tasks if t['id'] == task_id), "Unknown Task")
+            saved_sub_name = ""
+            if subtask_id:
+                _subs = db.get_subtasks(task_id)
+                _sub = next((s for s in _subs if s['id'] == subtask_id), None)
+                if _sub:
+                    saved_sub_name = f" → {_sub['title']}"
+            st.success(f"✅ Saved {time_str} for **{saved_task_name}**{saved_sub_name}")
             st.rerun()
 
     # No auto-refresh needed - JavaScript timer handles live display
@@ -429,8 +447,11 @@ def render_timer_page():
         for log in today_logs:
             col_info, col_dur, col_del = st.columns([5, 2, 1])
             with col_info:
+                subtask_badge = ""
+                if log.get('subtask_title'):
+                    subtask_badge = f" <small style='color:#60A5FA;'>↳ {log['subtask_title']}</small>"
                 st.markdown(
-                    f"{log['category_icon']} **{log['task_title']}** "
+                    f"{log['category_icon']} **{log['task_title']}**{subtask_badge} "
                     f"<small style='color:#6B7280;'>({log['category_name']})</small>",
                     unsafe_allow_html=True
                 )

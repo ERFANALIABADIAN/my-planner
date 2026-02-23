@@ -524,10 +524,12 @@ if HAS_STREAMLIT:
                       end_date: str = None):
         query = """
             SELECT tl.*, t.title as task_title, c.name as category_name,
-                   c.color as category_color, c.icon as category_icon
+                   c.color as category_color, c.icon as category_icon,
+                   s.title as subtask_title
             FROM time_logs tl
             JOIN tasks t ON tl.task_id = t.id
             JOIN categories c ON t.category_id = c.id
+            LEFT JOIN subtasks s ON tl.subtask_id = s.id
             WHERE tl.user_id = ?
         """
         params = [user_id]
@@ -547,10 +549,12 @@ else:
                       end_date: str = None):
         query = """
             SELECT tl.*, t.title as task_title, c.name as category_name,
-                   c.color as category_color, c.icon as category_icon
+                   c.color as category_color, c.icon as category_icon,
+                   s.title as subtask_title
             FROM time_logs tl
             JOIN tasks t ON tl.task_id = t.id
             JOIN categories c ON t.category_id = c.id
+            LEFT JOIN subtasks s ON tl.subtask_id = s.id
             WHERE tl.user_id = ?
         """
         params = [user_id]
