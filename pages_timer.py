@@ -318,7 +318,7 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                             0, True, mode_str, pom_mins, selected_subtask_id
                         )
                         st.session_state['db_synced'] = True
-                        # No rerun needed; fragment will update UI instantly
+                        st.rerun()  # Force rerun so timer UI updates instantly
             else:
                 # State 3: Paused - Resume | Stop | Reset
                 col_resume, col_stop, col_reset = st.columns(3)

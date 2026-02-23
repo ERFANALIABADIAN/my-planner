@@ -115,11 +115,6 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             st.rerun()  # Fragment rerun
 
         if _sub_open:
-            # Initialize auto-close timer on first open
-            timer_key = f'subtask_timer_{task_id}'
-            if timer_key not in st.session_state:
-                st.session_state[timer_key] = time.time()
-
             st.markdown("""
             <style>
             div[data-testid="stCheckbox"] { padding: 0 !important; margin: 0 !important; }
@@ -132,7 +127,6 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             }
             </style>""", unsafe_allow_html=True)
 
-            all_done = True
             for sub in subtasks:
                 col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
                 with col_check:
@@ -156,8 +150,6 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                         db.delete_subtask(sub['id'])
                         st.rerun()  # Fragment rerun
-                if not sub['is_done']:
-                    all_done = False
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
@@ -169,28 +161,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                 if st.button("➕", key=f"add_sub_{task_id}"):
                     if new_sub_title.strip():
                         db.create_subtask(task_id, new_sub_title.strip())
-                        st.session_state[_sub_key] = False  # auto-close
+                        # Do NOT auto-close after adding
                         st.rerun()  # Fragment rerun
-
-            # Auto-close logic
-            if all_done and subtasks:
-                st.session_state[_sub_key] = False
-                st.rerun()  # Instantly close if all checked
-            else:
-                elapsed = time.time() - st.session_state[timer_key]
-                if elapsed > 2:
-                    st.session_state[_sub_key] = False
-                    st.rerun()  # Close the subtask window
 
 
 def _render_log_time_section(user_id, task_id, task_title):
     """Log Time panel helper (called within task fragment)."""
     _log_key = f'log_open_{task_id}'
-    # Always close log panel on navigation unless just saved
-    if _log_key not in st.session_state or st.session_state.get('force_close_log', False):
-        st.session_state[_log_key] = False
-        if 'force_close_log' in st.session_state:
-            del st.session_state['force_close_log']
+    # Always close log panel on navigation
+    st.session_state[_log_key] = False
     _log_open = st.session_state[_log_key]
 
     with st.container():
