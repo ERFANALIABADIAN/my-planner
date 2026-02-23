@@ -17,14 +17,20 @@ ICONS = [
 ]
 
 
-def _subtask_toggle_cb(sub_id: int):
-    """Callback executed when a subtask checkbox changes. No rerun needed."""
+def _subtask_toggle_cb(sub_id: int, task_id: int):
+    """Callback executed when a subtask checkbox changes. Closes the subtask window."""
     db.toggle_subtask(sub_id)
-    # Invalidate the subtask cache so the updated count is reflected
+    # Invalidate caches
     try:
         db.get_subtasks.clear()
+        # Also force parent task to refresh total_time/progress if dependent
+        db.get_task_by_id.clear() 
     except Exception:
         pass
+    
+    # Auto-close subtask window as requested
+    st.session_state[f'sub_open_{task_id}'] = False
+
 
 
 @st.fragment
@@ -128,7 +134,8 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         key=f"sub_{sub['id']}",
                         label_visibility="collapsed",
                         on_change=_subtask_toggle_cb,
-                        args=(sub['id'],)
+                        # Pass sub_id AND task_id to callback
+                        args=(sub['id'], task_id)
                     )
                 with col_name:
                     strike = "line-through" if sub['is_done'] else "none"
@@ -257,7 +264,12 @@ def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg
             # Show subtask progress independently (stacked if both exist)
             if subtasks:
                 sub_pct = done_count / len(subtasks) if subtasks else 0
-                st.caption(f"{done_count}/{len(subtasks)} subtasks")
+                # Use custom div to control spacing tightly like the goal bar
+                st.markdown(f"""
+                <div style="font-size:0.75rem; color:{muted_col}; margin-bottom:2px; margin-top:4px;">
+                    {done_count}/{len(subtasks)} subtasks
+                </div>
+                """, unsafe_allow_html=True)
                 st.progress(sub_pct)
 
         with col_actions:
