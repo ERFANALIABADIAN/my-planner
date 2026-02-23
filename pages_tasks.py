@@ -202,8 +202,6 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.session_state[_log_key] = False  # auto-close
                     # Natural rerun will re-render fragment with updated data
         
-        else:
-
 
 @st.fragment
 def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg, done_bg):
@@ -255,8 +253,9 @@ def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg
                 </div>
                 """, unsafe_allow_html=True)
                 st.progress(bar_pct)
-                
-            elif subtasks:
+            
+            # Show subtask progress independently (stacked if both exist)
+            if subtasks:
                 sub_pct = done_count / len(subtasks) if subtasks else 0
                 st.caption(f"{done_count}/{len(subtasks)} subtasks")
                 st.progress(sub_pct)
