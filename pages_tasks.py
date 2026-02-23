@@ -234,8 +234,20 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.session_state[f'_log_min_local_{task_id}'] = 25
                     st.session_state[f'_log_date_local_{task_id}'] = date.today()
                     st.session_state[f'_log_note_local_{task_id}'] = ""
-                    # Queue toast to show after rerun so it's always visible
-                    st.session_state[f'_pending_log_toast_{task_id}'] = f"✅ Logged {format_minutes(minutes)} for '{task_title}'"
+                    # Queue toast to show after rerun so it's always visible (no seconds)
+                    # Format minutes without seconds for cleaner toasts
+                    def _fmt_min_no_secs(m):
+                        try:
+                            total_min = int(round(float(m)))
+                        except Exception:
+                            total_min = int(m)
+                        hrs = total_min // 60
+                        mins = total_min % 60
+                        return f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
+
+                    st.session_state[f'_pending_log_toast_{task_id}'] = (
+                        f"✅ Logged {_fmt_min_no_secs(minutes)} for '{task_title}'"
+                    )
                     st.rerun() # Ensure UI reflects saved data immediately
 
         
@@ -364,6 +376,32 @@ def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg
     # Subtasks & Log Time (rendered within the fragment so updates propagate)
     _render_subtask_section(task['id'], subtasks, text_col, muted_col)
     _render_log_time_section(user_id, task['id'], task['title'])
+
+    # Show recent manual/time logs for this task so users can see what they worked on
+    try:
+        recent_logs = db.get_time_logs(user_id, task_id=task['id'])[:5]
+    except Exception:
+        recent_logs = []
+
+    if recent_logs:
+        st.markdown("**Recent Logs**")
+        for log in recent_logs:
+            col_l, col_r = st.columns([6, 2])
+            with col_l:
+                badge = f" <small style='color:#60A5FA;'>↳ {log.get('subtask_title')}</small>" if log.get('subtask_title') else ""
+                st.markdown(
+                    f"{log['category_icon']} **{log['task_title']}**{badge} <small style='color:#6B7280;'>({log['category_name']})</small>",
+                    unsafe_allow_html=True
+                )
+                if log.get('note'):
+                    st.caption(log['note'])
+            with col_r:
+                # Format minutes without seconds for compact display here
+                total_min = int(round(float(log['duration_minutes'])))
+                hrs = total_min // 60
+                mins = total_min % 60
+                time_display = f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
+                st.markdown(f"⏱ **{time_display}**")
 
     st.divider()
 
