@@ -30,7 +30,7 @@ def render_analytics_page():
     st.session_state['_tasks_initialized'] = False
     user_id = st.session_state['user_id']
 
-    st.markdown("## 📊 Analytics & Reports")
+    st.markdown("## 📊 Analytics & Reports") 
 
     # ─── Period Selection ─────────────────────────────────────
     tab_daily, tab_weekly, tab_monthly, tab_trend = st.tabs([

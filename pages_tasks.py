@@ -592,41 +592,6 @@ def render_tasks_page():
         )
         return
 
-    # Pagination: show a slice of tasks to avoid creating many widgets at once
-    if 'tasks_page_idx' not in st.session_state:
-        st.session_state['tasks_page_idx'] = 0
-    if 'tasks_page_size' not in st.session_state:
-        st.session_state['tasks_page_size'] = 25
-
-    col_ps, col_nav = st.columns([3, 1])
-    with col_ps:
-        page_size = st.selectbox("Tasks per page", options=[10, 25, 50, 100], index=[10,25,50,100].index(st.session_state['tasks_page_size']), key='tasks_page_size')
-        st.session_state['tasks_page_size'] = int(page_size)
-    with col_nav:
-        cols = st.columns([1,1])
-        if cols[0].button("◀ Prev", key="tasks_prev"):
-            st.session_state['tasks_page_idx'] = max(0, st.session_state['tasks_page_idx'] - 1)
-            st.experimental_rerun()
-        if cols[1].button("Next ▶", key="tasks_next"):
-            st.session_state['tasks_page_idx'] = st.session_state['tasks_page_idx'] + 1
-            st.experimental_rerun()
-
-    page_idx = st.session_state.get('tasks_page_idx', 0)
-    page_size = st.session_state.get('tasks_page_size', 25)
-    start = page_idx * page_size
-    end = start + page_size
-    paged_tasks = tasks[start:end]
-
-    # Hidden profiling: store render time in session state (ms) for debugging only
-    t0 = time.perf_counter()
-    for task in paged_tasks:
+    for task in tasks:
         # Render each task as an isolated fragment for high performance
         _render_task_item(task['id'], user_id, categories, _text_col, _muted_col, _card_bg, _done_bg)
-    t1 = time.perf_counter()
-    st.session_state['_last_tasks_render_ms'] = int((t1 - t0) * 1000)
-
-    # If there are more tasks, show a lightweight hint to load next page
-    if end < len(tasks):
-        if st.button("Load more tasks", key="tasks_load_more"):
-            st.session_state['tasks_page_idx'] = page_idx + 1
-            st.experimental_rerun()
