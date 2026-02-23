@@ -469,4 +469,4 @@ with st.sidebar:
             st.rerun()
 
 # Ensure sidebar highlight updates immediately on click
-st.sidebar.button("Update Highlight", on_click=lambda: st.experimental_rerun())
+
