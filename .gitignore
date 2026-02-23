@@ -1,5 +1,7 @@
 # Database
 planner.db
+planner.db-shm
+planner.db-wal
 
 # Python
 __pycache__/
