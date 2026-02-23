@@ -82,9 +82,20 @@ st.markdown(f"""
         border: 1px solid {_border} !important;
         border-radius: 12px; margin-bottom: 0.5rem; color: {_text} !important;
     }}
-    [data-testid="stExpander"] summary {{ color: {_head} !important; }}
+    [data-testid="stExpander"] summary {{
+        color: {_head} !important;
+        background-color: {_surface} !important;
+        border-radius: 12px;
+        padding: 0.6rem 1rem !important;
+    }}
     [data-testid="stExpander"] details {{ background-color: {_surface} !important; }}
+    [data-testid="stExpander"] details[open] > summary {{ border-radius: 12px 12px 0 0 !important; }}
     [data-testid="stExpander"] > div:first-child {{ background-color: {_surface} !important; }}
+    /* Expander inner content area */
+    [data-testid="stExpander"] details > div {{
+        background-color: {_surface} !important;
+        border-radius: 0 0 12px 12px;
+    }}
     
     /* Expander arrow icon */
     [data-testid="stExpander"] summary svg {{
@@ -221,6 +232,18 @@ st.markdown(f"""
         background-color: {_input} !important; color: {_text} !important;
         border: 1px solid {_border} !important; border-radius: 8px;
         caret-color: {_text} !important;
+    }}
+    /* Number input wrapper container (baseweb) */
+    .stNumberInput [data-baseweb="input"],
+    .stNumberInput [data-baseweb="base-input"],
+    div[data-testid="stNumberInput"] > div,
+    div[data-testid="stNumberInput"] > div > div {{
+        background-color: {_input} !important;
+        border-color: {_border} !important;
+    }}
+    div[data-testid="stNumberInput"] input {{
+        background-color: {_input} !important;
+        color: {_text} !important;
     }}
     .stTextInput > div > div > input::placeholder,
     .stTextArea > div > div > textarea::placeholder {{
