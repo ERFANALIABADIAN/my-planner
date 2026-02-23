@@ -411,11 +411,11 @@ def _render_timer_dashboard(user_id, tasks, task_options):
             st.session_state['timer_paused_elapsed'] = 0
             st.session_state['timer_elapsed'] = 0
 
-            # Feedback
-            hrs = int(final_elapsed // 3600)
-            ms = int((final_elapsed % 3600) // 60)
-            ss = int(final_elapsed % 60)
-            t_str = f"{hrs}h {ms}m {ss}s" if hrs > 0 else (f"{ms}m {ss}s" if ms > 0 else f"{ss}s")
+            # Feedback - show minutes only (no seconds)
+            total_minutes = int(round(final_elapsed / 60))
+            hrs = total_minutes // 60
+            mins = total_minutes % 60
+            t_str = f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
             st.toast(f"✅ Saved {t_str}!", icon="⏱️")
 
             # FULL RERUN to update the Today's Sessions list below the fragment
@@ -460,18 +460,12 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                 if log['note']:
                     st.caption(log['note'])
             with col_dur:
-                source_icon = "⏱"  # always use timer icon (removed pencil ✏️)
-                # Display minutes and seconds for accurate time display
-                total_seconds = int(log['duration_minutes'] * 60)
-                hours = total_seconds // 3600
-                mins = (total_seconds % 3600) // 60
-                secs = total_seconds % 60
-                if hours > 0:
-                    time_display = f"{hours}h {mins}m {secs}s"
-                elif mins > 0:
-                    time_display = f"{mins}m {secs}s"
-                else:
-                    time_display = f"{secs}s"
+                source_icon = "⏱"  # always use timer icon
+                # Display minutes only for compactness
+                total_min = int(round(float(log['duration_minutes'])))
+                hours = total_min // 60
+                mins = total_min % 60
+                time_display = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
                 st.markdown(f"{source_icon} **{time_display}**")
             with col_del:
                 if st.button("🗑️", key=f"del_log_{log['id']}", help="Delete session", type="tertiary"):
