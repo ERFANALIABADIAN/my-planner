@@ -517,11 +517,9 @@ def render_tasks_page():
                         if is_active:
                             st.session_state.pop('filter_cat_id', None)
                             st.session_state['main_cat_filter'] = "All Categories"
-                            st.experimental_rerun()
                         else:
                             st.session_state['filter_cat_id'] = cat['id']
                             st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
-                            st.experimental_rerun()
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])
@@ -590,7 +588,8 @@ def render_tasks_page():
         )
         return
 
-    # ...existing code... (render tasks)
+    # Ensure sidebar category selection syncs to main page
+    st.experimental_rerun()
 
     for task in tasks:
         # Render each task as an isolated fragment for high performance
