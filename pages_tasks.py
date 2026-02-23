@@ -182,7 +182,8 @@ def _render_log_time_section(user_id, task_id, task_title):
             type="secondary"
         ):
             st.session_state[_log_key] = not _log_open
-            # No st.rerun() needed - button click naturally triggers fragment rerun
+            # Ensure immediate UI update so single click opens/closes reliably
+            st.rerun()
 
         if _log_open:
             # Use local variables for log time fields to avoid rerun issues
@@ -222,7 +223,6 @@ def _render_log_time_section(user_id, task_id, task_title):
                         st.session_state[f'_log_note_local_{task_id}'], "manual"
                     )
                     st.toast(f"✅ Logged {format_minutes(st.session_state[f'_log_min_local_{task_id}'])} for '{task_title}'", icon="⏱")
-                    st.session_state[_log_key] = False  # auto-close
                     # Reset local fields
                     st.session_state[f'_log_min_local_{task_id}'] = 25
                     st.session_state[f'_log_date_local_{task_id}'] = date.today()
