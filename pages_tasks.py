@@ -153,18 +153,22 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
-                new_sub_key = f"new_sub_{task_id}"
-                # Let the widget manage its own value via `key` so clearing session state works reliably
+                # Use a rotating counter in the widget key so we can force a fresh widget instance
+                ctr_key = f'new_sub_ctr_{task_id}'
+                if ctr_key not in st.session_state:
+                    st.session_state[ctr_key] = 0
+                ctr = st.session_state[ctr_key]
+                rotating_key = f"new_sub_{task_id}_{ctr}"
                 new_sub_title = st.text_input(
                     "New subtask", placeholder="Add a subtask...",
-                    key=new_sub_key, label_visibility="collapsed"
+                    key=rotating_key, label_visibility="collapsed"
                 )
             with col_add_sub:
                 if st.button("➕", key=f"add_sub_{task_id}"):
                     if new_sub_title.strip():
                         db.create_subtask(task_id, new_sub_title.strip())
-                        # Clear input after add
-                        st.session_state.pop(new_sub_key, None)
+                        # Advance counter so next render creates a new widget instance (cleared)
+                        st.session_state[ctr_key] = ctr + 1
                         st.rerun()  # Fragment rerun
 
 
