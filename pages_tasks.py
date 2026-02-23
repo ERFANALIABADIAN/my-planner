@@ -504,34 +504,28 @@ def render_tasks_page():
             filter_id = cat_options.get(main_cat, None) if main_cat != "All Categories" else None
             for cat in categories:
                 col_cat, col_del = st.columns([0.85, 0.15])
-                label = f"{cat['icon']} {cat['name']}"
                 with col_cat:
                     is_active = filter_id == cat['id']
                     btn_style = "primary" if is_active else "secondary"
-
-                    def _on_sidebar_cat_click(cat_id=cat['id'], cat_label=label):
-                        # Toggle filter; also sync the main dropdown widget and rerun immediately
-                        if st.session_state.get('filter_cat_id') == cat_id:
+                    if st.button(
+                        f"{cat['icon']} {cat['name']}",
+                        key=f"sidebar_cat_{cat['id']}",
+                        use_container_width=True,
+                        type=btn_style
+                    ):
+                        # Toggle filter; also sync the main dropdown widget
+                        if is_active:
                             st.session_state.pop('filter_cat_id', None)
                             st.session_state['main_cat_filter'] = "All Categories"
                         else:
-                            st.session_state['filter_cat_id'] = cat_id
-                            st.session_state['main_cat_filter'] = cat_label
-                        st.experimental_rerun()
-
-                    st.button(
-                        label,
-                        key=f"sidebar_cat_{cat['id']}",
-                        use_container_width=True,
-                        type=btn_style,
-                        on_click=_on_sidebar_cat_click
-                    )
+                            st.session_state['filter_cat_id'] = cat['id']
+                            st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])
                         if st.session_state.get('filter_cat_id') == cat['id']:
                             st.session_state.pop('filter_cat_id', None)
-                        st.experimental_rerun()
+                        st.rerun()
         else:
             st.info("No categories yet. Create one above!")
 
