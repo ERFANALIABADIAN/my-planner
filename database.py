@@ -401,6 +401,18 @@ if HAS_STREAMLIT:
             params.append(status)
         query += " ORDER BY t.sort_order, t.created_at DESC"
         return _query(query, params)
+    
+    @st.cache_data(ttl=20, show_spinner=False)
+    def get_task_by_id(task_id: int):
+        q = """
+            SELECT t.*, 
+                   c.name as category_name, c.color as category_color, c.icon as category_icon,
+                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+            FROM tasks t
+            JOIN categories c ON t.category_id = c.id 
+            WHERE t.id = ?
+        """
+        return _query(q, [task_id], fetch="one")
 else:
     def get_tasks(user_id: int, category_id: int = None, status: str = None):
         query = """
@@ -421,6 +433,17 @@ else:
         query += " ORDER BY t.sort_order, t.created_at DESC"
         return _query(query, params)
 
+    def get_task_by_id(task_id: int):
+        q = """
+            SELECT t.*, 
+                   c.name as category_name, c.color as category_color, c.icon as category_icon,
+                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+            FROM tasks t
+            JOIN categories c ON t.category_id = c.id 
+            WHERE t.id = ?
+        """
+        return _query(q, [task_id], fetch="one")
+
 
 def create_task(user_id: int, category_id: int, title: str, description: str = "", goal_minutes: float = 0):
     if HAS_STREAMLIT:
@@ -434,6 +457,7 @@ def create_task(user_id: int, category_id: int, title: str, description: str = "
 def update_task(task_id: int, **kwargs):
     if HAS_STREAMLIT:
         get_tasks.clear()
+        get_task_by_id.clear()
     allowed = {'title', 'description', 'status', 'priority', 'category_id', 'sort_order'}
     for key, val in kwargs.items():
         if key in allowed and val is not None:
@@ -446,6 +470,7 @@ def update_task(task_id: int, **kwargs):
 def delete_task(task_id: int):
     if HAS_STREAMLIT:
         get_tasks.clear()
+        get_task_by_id.clear()
         get_subtasks.clear()
         get_time_logs.clear()
     _query("DELETE FROM tasks WHERE id = ?", [task_id], fetch="none")
@@ -504,6 +529,7 @@ def add_time_log(user_id: int, task_id: int, duration_minutes: float,
         get_time_logs.clear()
         get_daily_summary.clear()
         get_tasks.clear()  # Clear tasks cache because total_time is now embedded
+        get_task_by_id.clear()
         get_weekly_summary.clear()
         get_monthly_summary.clear()
         get_daily_trend.clear()
@@ -576,6 +602,7 @@ def delete_time_log(log_id: int):
         get_time_logs.clear()
         get_daily_summary.clear()
         get_tasks.clear()  # Clear tasks cache because total_time is now embedded
+        get_task_by_id.clear()
         get_weekly_summary.clear()
         get_monthly_summary.clear()
         get_daily_trend.clear()

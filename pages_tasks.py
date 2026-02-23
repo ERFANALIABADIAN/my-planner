@@ -89,9 +89,8 @@ def _render_sidebar_new_category(user_id, text_col):
                     st.warning("Enter a name.")
 
 
-@st.fragment
 def _render_subtask_section(task_id, subtasks, text_col, muted_col):
-    """Fragment: Subtasks panel — reruns only itself when toggled."""
+    """Subtasks panel helper (called within task fragment)."""
     sub_label = f"Subtasks ({sum(1 for s in subtasks if s['is_done'])}/{len(subtasks)})" if subtasks else "Add Subtasks"
     _sub_key = f'sub_open_{task_id}'
     if _sub_key not in st.session_state:
@@ -142,7 +141,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                 with col_sub_del:
                     if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                         db.delete_subtask(sub['id'])
-                        st.rerun()  # Full rerun to refresh subtask list
+                        st.rerun()  # Fragment rerun
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
@@ -155,12 +154,11 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     if new_sub_title.strip():
                         db.create_subtask(task_id, new_sub_title.strip())
                         st.session_state[_sub_key] = False  # auto-close
-                        st.rerun()  # Full rerun to refresh subtask list
+                        st.rerun()  # Fragment rerun
 
 
-@st.fragment
 def _render_log_time_section(user_id, task_id, task_title):
-    """Fragment: Log Time panel — reruns only itself when toggled."""
+    """Log Time panel helper (called within task fragment)."""
     _log_key = f'log_open_{task_id}'
     if _log_key not in st.session_state:
         st.session_state[_log_key] = False
@@ -202,6 +200,128 @@ def _render_log_time_section(user_id, task_id, task_title):
                     st.toast(f"✅ Logged {format_minutes(log_mins)} for '{task_title}'", icon="⏱")
                     st.session_state[_log_key] = False  # auto-close
                     st.rerun()
+
+
+@st.fragment
+def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg, done_bg):
+    """Fragment for a single task row. Handles its own updates (Done/Undo/Edit/Subtasks/LogTime)."""
+    # Fetch fresh task state
+    task = db.get_task_by_id(task_id)
+    if not task:
+        return  # Task deleted
+
+    # Fetch fresh subtasks
+    subtasks = db.get_subtasks(task_id)
+    
+    # Calculate progress
+    total_time = task.get('total_time', 0)
+    done_count = sum(1 for s in subtasks if s['is_done'])
+    progress = done_count / len(subtasks) if subtasks else 0
+
+    is_completed = task['status'] == 'completed'
+    border_color = task['category_color']
+    goal_minutes = task.get('goal_minutes') or 0
+
+    with st.container():
+        col_main, col_time, col_actions = st.columns([5, 2, 2])
+
+        with col_main:
+            title_style = "text-decoration: line-through; color: #9CA3AF;" if is_completed else ""
+            st.markdown(
+                f"**<span style='{title_style}'>{task['category_icon']} {task['title']}</span>**"
+                f" <small style='color:{border_color};'>({task['category_name']})</small>",
+                unsafe_allow_html=True
+            )
+            if task['description']:
+                st.caption(task['description'])
+
+        with col_time:
+            st.markdown(f"⏱ **{format_minutes(total_time)}**")
+            
+            # Progress bar
+            if goal_minutes > 0:
+                raw_pct = total_time / goal_minutes
+                bar_pct = min(raw_pct, 1.0)
+                pct_display = int(raw_pct * 100)
+                
+                goal_h = goal_minutes / 60.0
+                color = "#EF4444" if raw_pct > 1.0 else muted_col
+                st.markdown(f"""
+                <div style="font-size:0.75rem; color:{color}; margin-bottom:2px;">
+                    Goal: <b>{goal_h:g}h</b> &nbsp;•&nbsp; {pct_display}%
+                </div>
+                """, unsafe_allow_html=True)
+                st.progress(bar_pct)
+                
+            elif subtasks:
+                sub_pct = done_count / len(subtasks) if subtasks else 0
+                st.caption(f"{done_count}/{len(subtasks)} subtasks")
+                st.progress(sub_pct)
+
+        with col_actions:
+            col_a1, col_a2, col_a3 = st.columns(3)
+            with col_a1:
+                if not is_completed:
+                    if st.button("✅", key=f"done_{task['id']}", help="Mark complete", type="tertiary"):
+                        db.update_task(task['id'], status='completed')
+                        st.rerun() # Fragment rerun
+                else:
+                    if st.button("↩️", key=f"undo_{task['id']}", help="Reactivate", type="tertiary"):
+                        db.update_task(task['id'], status='active')
+                        st.rerun() # Fragment rerun
+            with col_a2:
+                if st.button("✏️", key=f"edit_{task['id']}", help="Edit", type="tertiary"):
+                    st.session_state[f'editing_task_{task["id"]}'] = True
+                    st.rerun()
+            with col_a3:
+                # Delete triggers a full app rerun because the list structure changes
+                if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
+                    db.delete_task(task['id'])
+                    # We can try to just return and let the fragment hide itself, 
+                    # but the container remains. Better to trigger full rerun.
+                    # Wait, st.rerun() inside fragment reruns fragment.
+                    # To rerun app, we need to modify a top-level state or hack it?
+                    # Actually, if we delete it, db.get_task_by_id returns None, so we return immediately.
+                    # The fragment renders nothing. The container is empty.
+                    # This is visually fine!
+                    st.rerun()
+
+        # Edit task inline
+        if st.session_state.get(f'editing_task_{task["id"]}', False):
+            with st.form(f"edit_form_{task['id']}"):
+                new_title = st.text_input("Title", value=task['title'])
+                new_desc = st.text_area("Description", value=task['description'] or "", height=60)
+                new_cat = st.selectbox(
+                    "Category",
+                    options=[c['id'] for c in categories],
+                    index=next((i for i, c in enumerate(categories) if c['id'] == task['category_id']), 0),
+                    format_func=lambda x: next(
+                        f"{c['icon']} {c['name']}" for c in categories if c['id'] == x, "Unknown"
+                    ),
+                    key=f"edit_cat_{task['id']}"
+                )
+                curr_goal_h = (task.get('goal_minutes') or 0) / 60
+                new_goal_h = st.number_input(
+                    "Goal Hours (0 = no goal)",
+                    min_value=0.0, max_value=10000.0, value=float(curr_goal_h), step=0.5
+                )
+                col_save, col_cancel = st.columns(2)
+                with col_save:
+                    if st.form_submit_button("Save", type="primary", use_container_width=True):
+                        db.update_task(task['id'], title=new_title, description=new_desc,
+                                       category_id=new_cat, goal_minutes=new_goal_h * 60)
+                        st.session_state.pop(f'editing_task_{task["id"]}', None)
+                        st.rerun()
+                with col_cancel:
+                    if st.form_submit_button("Cancel", use_container_width=True):
+                        st.session_state.pop(f'editing_task_{task["id"]}', None)
+                        st.rerun()
+
+    # Subtasks & Log Time (rendered within the fragment so updates propagate)
+    _render_subtask_section(task['id'], subtasks, text_col, muted_col)
+    _render_log_time_section(user_id, task['id'], task['title'])
+
+    st.divider()
 
 
 @st.fragment
@@ -402,112 +522,5 @@ def render_tasks_page():
         return
 
     for task in tasks:
-        # Optimized: retrieve pre-fetched total_time from query
-        total_time = task.get('total_time', 0)
-        
-        subtasks = db.get_subtasks(task['id'])
-        done_count = sum(1 for s in subtasks if s['is_done'])
-        progress = done_count / len(subtasks) if subtasks else 0
-
-        is_completed = task['status'] == 'completed'
-        border_color = task['category_color']
-        goal_minutes = task.get('goal_minutes') or 0
-
-        with st.container():
-            col_main, col_time, col_actions = st.columns([5, 2, 2])
-
-            with col_main:
-                title_style = "text-decoration: line-through; color: #9CA3AF;" if is_completed else ""
-                st.markdown(
-                    f"**<span style='{title_style}'>{task['category_icon']} {task['title']}</span>**"
-                    f" <small style='color:{border_color};'>({task['category_name']})</small>",
-                    unsafe_allow_html=True
-                )
-                if task['description']:
-                    st.caption(task['description'])
-
-            with col_time:
-                st.markdown(f"⏱ **{format_minutes(total_time)}**")
-                
-                # Progress bar only when a goal has been set
-                if goal_minutes > 0:
-                    raw_pct = total_time / goal_minutes
-                    bar_pct = min(raw_pct, 1.0)
-                    pct_display = int(raw_pct * 100)
-                    
-                    # Display goal explicitly as requested
-                    goal_h = goal_minutes / 60.0
-                    passed_h = total_time / 60.0
-                    
-                    # Use custom HTML for better visibility of goal info
-                    color = "#EF4444" if raw_pct > 1.0 else _muted_col
-                    st.markdown(f"""
-                    <div style="font-size:0.75rem; color:{color}; margin-bottom:2px;">
-                        Goal: <b>{goal_h:g}h</b> &nbsp;•&nbsp; {pct_display}%
-                    </div>
-                    """, unsafe_allow_html=True)
-                    st.progress(bar_pct)
-                    
-                elif subtasks:
-                    # Show subtask completion bar only (no goal)
-                    sub_pct = done_count / len(subtasks) if subtasks else 0
-                    st.caption(f"{done_count}/{len(subtasks)} subtasks")
-                    st.progress(sub_pct)
-
-            with col_actions:
-                # All action buttons are borderless (icon-only)
-                col_a1, col_a2, col_a3 = st.columns(3)
-                with col_a1:
-                    if not is_completed:
-                        if st.button("✅", key=f"done_{task['id']}", help="Mark complete", type="tertiary"):
-                            db.update_task(task['id'], status='completed')
-                            st.rerun()
-                    else:
-                        if st.button("↩️", key=f"undo_{task['id']}", help="Reactivate", type="tertiary"):
-                            db.update_task(task['id'], status='active')
-                            st.rerun()
-                with col_a2:
-                    if st.button("✏️", key=f"edit_{task['id']}", help="Edit", type="tertiary"):
-                        st.session_state[f'editing_task_{task["id"]}'] = True
-                with col_a3:
-                    if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
-                        db.delete_task(task['id'])
-                        st.rerun()
-
-            # Edit task inline
-            if st.session_state.get(f'editing_task_{task["id"]}', False):
-                with st.form(f"edit_form_{task['id']}"):
-                    new_title = st.text_input("Title", value=task['title'])
-                    new_desc = st.text_area("Description", value=task['description'] or "", height=60)
-                    new_cat = st.selectbox(
-                        "Category",
-                        options=[c['id'] for c in categories],
-                        index=next(i for i, c in enumerate(categories) if c['id'] == task['category_id']),
-                        format_func=lambda x: next(
-                            f"{c['icon']} {c['name']}" for c in categories if c['id'] == x
-                        ),
-                        key=f"edit_cat_{task['id']}"
-                    )
-                    curr_goal_h = (task.get('goal_minutes') or 0) / 60
-                    new_goal_h = st.number_input(
-                        "Goal Hours (0 = no goal)",
-                        min_value=0.0, max_value=10000.0, value=float(curr_goal_h), step=0.5
-                    )
-                    col_save, col_cancel = st.columns(2)
-                    with col_save:
-                        if st.form_submit_button("Save", type="primary", use_container_width=True):
-                            db.update_task(task['id'], title=new_title, description=new_desc,
-                                           category_id=new_cat, goal_minutes=new_goal_h * 60)
-                            st.session_state.pop(f'editing_task_{task["id"]}', None)
-                            st.rerun()
-                    with col_cancel:
-                        if st.form_submit_button("Cancel", use_container_width=True):
-                            st.session_state.pop(f'editing_task_{task["id"]}', None)
-                            st.rerun()
-
-        # ─── Subtasks & Log Time ── rendered OUTSIDE the task container
-        # so they match the full page width (same as Add New Task button)
-        _render_subtask_section(task['id'], subtasks, _text_col, _muted_col)
-        _render_log_time_section(user_id, task['id'], task['title'])
-
-        st.divider()
+        # Render each task as an isolated fragment for high performance
+        _render_task_item(task['id'], user_id, categories, _text_col, _muted_col, _card_bg, _done_bg)

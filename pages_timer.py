@@ -247,8 +247,8 @@ def render_timer_page():
 
     with col_timer:
         # ── Session keepalive: auto-refresh every 3 min ONLY when timer is running ──
-        if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
-            st_autorefresh(interval=180_000, key="timer_keepalive")
+        # if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
+        #     st_autorefresh(interval=180_000, key="timer_keepalive")
 
         # Calculate elapsed time
         if st.session_state['timer_running'] and st.session_state['timer_start']:
