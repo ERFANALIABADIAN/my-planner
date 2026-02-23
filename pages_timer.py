@@ -310,7 +310,7 @@ def render_timer_page():
                             0, True, mode_str, pom_mins, selected_subtask_id
                         )
                         st.session_state['db_synced'] = True
-                        # st.rerun() -> Removed to prevent double refresh. Button click triggers update.
+                        st.rerun() # Rerun to reflect state change immediately
             else:
                 # State 3: Paused - Resume | Stop | Reset
                 col_resume, col_stop, col_reset = st.columns(3)
@@ -328,7 +328,7 @@ def render_timer_page():
                             st.session_state.get('timer_subtask_id')
                         )
                         st.session_state['db_synced'] = True
-                        # st.rerun() -> Removed
+                        st.rerun() # Rerun to reflect resume state immediately
                 with col_stop:
                     if st.button("⏹ Stop & Save", use_container_width=True):
                         final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
@@ -339,7 +339,7 @@ def render_timer_page():
                         st.session_state['timer_elapsed'] = 0
                         db.delete_active_timer(user_id) # Clear DB
                         st.session_state['db_synced'] = False
-                        # st.rerun() -> Removed
+                        st.rerun() # Rerun to reflect reset immediately
         else:
             # State 2: Running - Pause | Stop
             col_pause, col_stop = st.columns(2)
@@ -363,7 +363,7 @@ def render_timer_page():
                         False, mode_str, pom_mins, 
                         st.session_state.get('timer_subtask_id')
                     )
-                    # st.rerun() -> Removed
+                    st.rerun() # Rerun to reflect pause state immediately
 
             with col_stop:
                 if st.button("⏹ Stop & Save", use_container_width=True, type="primary"):
@@ -419,7 +419,7 @@ def render_timer_page():
                 if _sub:
                     saved_sub_name = f" → {_sub['title']}"
             st.success(f"✅ Saved {time_str} for **{saved_task_name}**{saved_sub_name}")
-            # st.rerun() -> Removed
+            st.rerun() # Rerun to reset timer UI immediately
 
 
     # No auto-refresh needed - JavaScript timer handles live display
