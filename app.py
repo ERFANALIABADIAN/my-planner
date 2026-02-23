@@ -299,19 +299,36 @@ st.markdown(f"""
     }}
     
     /* Popover & Icon Picker Fixes - ULTIMATE DARK MODE FIX */
-    /* 1. The trigger button (showing current icon) */
+    /* 1. The trigger button (showing current icon) - square, no arrow, dark bg */
     [data-testid="stPopover"] > button {{
         background-color: {_input} !important;
         color: {_text} !important;
         border: 1px solid {_border} !important;
-        min-height: 2.5rem; /* Match height of color picker/inputs */
-        width: 100%;
-        display: flex; align-items: center; justify-content: center;
+        border-radius: 8px !important;
+        /* Make it square */
+        width: 2.8rem !important;
+        min-width: 2.8rem !important;
+        max-width: 2.8rem !important;
+        height: 2.8rem !important;
+        min-height: 2.8rem !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 1.3rem !important;
+        gap: 0 !important;
+    }}
+    /* Hide the dropdown chevron arrow inside popover button */
+    [data-testid="stPopover"] > button svg,
+    [data-testid="stPopover"] > button [data-testid="baseButton-icon"] {{
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
     }}
     /* Hover state for trigger button */
     [data-testid="stPopover"] > button:hover {{
         border-color: {_accent} !important;
-        color: {_accent} !important;
+        box-shadow: 0 0 0 2px {_accent}33 !important;
     }}
 
     /* 2. The popover container (content window) - multiple layers needed */

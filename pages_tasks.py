@@ -87,8 +87,8 @@ def render_tasks_page():
             with col_icon:
                 # Use caption instead of markdown for label to match size
                 st.caption("Icon")
-                # Popover is just the button here
-                popover = st.popover(picked, use_container_width=True)
+                # Popover is just the button here - no use_container_width so it stays square
+                popover = st.popover(picked)
                 with popover:
                     st.markdown("### Choose Icon")
                     cols = st.columns(5)
