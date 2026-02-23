@@ -188,7 +188,12 @@ def render_tasks_page():
         )
 
     # Add new task
-    with st.expander("➕ Add New Task", expanded=False):
+    # We use a session state key to control the expander's state.
+    # When a task is added, we set 'add_task_expanded' to False to close it.
+    if 'add_task_expanded' not in st.session_state:
+        st.session_state['add_task_expanded'] = False
+
+    with st.expander("➕ Add New Task", expanded=st.session_state['add_task_expanded']):
         with st.form("new_task_form", clear_on_submit=True):
             task_title = st.text_input("Task Title", placeholder="What do you need to do?")
             task_desc = st.text_area("Description (optional)", placeholder="Details...", height=80)
@@ -224,9 +229,12 @@ def render_tasks_page():
                         task_desc.strip(), goal_minutes=task_goal*60
                     )
                     st.success(f"Task added!")
+                    st.session_state['add_task_expanded'] = False
                     st.rerun()
                 else:
+                    st.session_state['add_task_expanded'] = True
                     st.warning("Enter a task title.")
+                    st.rerun()
 
     # Task list
     status_param = None if status_filter == "all" else status_filter
