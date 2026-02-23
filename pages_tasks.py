@@ -500,7 +500,10 @@ def render_tasks_page():
 
         # Category list – click to filter, trash to delete
         if categories:
-            filter_id = st.session_state.get('filter_cat_id', None)
+            # Always sync filter_id to match main_cat_filter (selectbox) for highlight
+            cat_options = {f"{c['icon']} {c['name']}": c['id'] for c in categories}
+            main_cat = st.session_state.get('main_cat_filter', "All Categories")
+            filter_id = cat_options.get(main_cat, None) if main_cat != "All Categories" else None
             for cat in categories:
                 col_cat, col_del = st.columns([0.85, 0.15])
                 with col_cat:
@@ -518,12 +521,7 @@ def render_tasks_page():
                             st.session_state['main_cat_filter'] = "All Categories"
                         else:
                             st.session_state['filter_cat_id'] = cat['id']
-                            # Set dropdown key to matching label so it shows selected
                             st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
-                        
-                        # Button click triggers rerun automatically.
-                        # Updating session state here ensures the next run sees the new filter.
-                        # No explicit st.rerun() needed.
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
                         db.delete_category(cat['id'])
