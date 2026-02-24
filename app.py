@@ -48,7 +48,7 @@ st.markdown(f"""
         background-color: {_bg} !important;
         transition: background-color 0.3s ease, color 0.3s ease;
     }}
-    .main .block-container {{ background-color: {_bg} !important; padding-top:0.4rem; }}
+    .main .block-container {{ background-color: {_bg} !important; padding-top:0.75rem; }}
     h1,h2,h3,h4,h5,h6 {{ color: {_head} !important; }}
     .stMarkdown p, .stMarkdown span {{ color: {_text}; }}
 
@@ -86,7 +86,7 @@ st.markdown(f"""
         color: {_head} !important;
         background-color: {_surface} !important;
         border-radius: 12px;
-        padding: 0.35rem 0.7rem !important;
+        padding: 0.6rem 1rem !important;
     }}
     [data-testid="stExpander"] details {{ background-color: {_surface} !important; }}
     [data-testid="stExpander"] details[open] > summary {{ border-radius: 12px 12px 0 0 !important; }}
@@ -203,7 +203,7 @@ st.markdown(f"""
 
     /* Metrics */
     [data-testid="stMetric"] {{
-        background: {_surface} !important; padding: 0.6rem;
+        background: {_surface} !important; padding: 1rem;
         border-radius: 12px; border: 1px solid {_border};
     }}
     [data-testid="stMetricLabel"] {{ font-size: 0.8rem !important; color: {_muted} !important; }}
@@ -221,7 +221,7 @@ st.markdown(f"""
     }}
 
     /* Dividers */
-    hr {{ border: none; border-top: 1px solid {_border}; margin: 0.25rem 0; }}
+    hr {{ border: none; border-top: 1px solid {_border}; margin: 0.5rem 0; }}
 
     /* Mobile responsive */
     @media (max-width: 768px) {{
