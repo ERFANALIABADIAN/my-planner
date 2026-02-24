@@ -472,31 +472,67 @@ def render_tasks_page():
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
         cd = st.session_state['confirm_delete']
-        with st.modal("Confirm Deletion"):
-            kind = cd.get('kind')
-            name = cd.get('name') or ''
-            st.markdown(f"Are you sure you want to delete **{kind}**: **{name}**? This action cannot be undone.")
-            col_yes, col_no = st.columns([1, 1])
-            with col_yes:
-                if st.button("Yes, delete", key="__confirm_delete_yes__", type="primary"):
-                    try:
-                        if kind == 'category':
-                            db.delete_category(cd['id'])
-                            if st.session_state.get('filter_cat_id') == cd['id']:
-                                st.session_state.pop('filter_cat_id', None)
-                        elif kind == 'task':
-                            db.delete_task(cd['id'])
-                        elif kind == 'subtask':
-                            db.delete_subtask(cd['id'])
-                        elif kind == 'timelog':
-                            db.delete_time_log(cd['id'])
-                    finally:
+        modal_shown = False
+        if hasattr(st, 'modal'):
+            try:
+                with st.modal("Confirm Deletion"):
+                    modal_shown = True
+                    kind = cd.get('kind')
+                    name = cd.get('name') or ''
+                    st.markdown(f"Are you sure you want to delete **{kind}**: **{name}**? This action cannot be undone.")
+                    col_yes, col_no = st.columns([1, 1])
+                    with col_yes:
+                        if st.button("Yes, delete", key="__confirm_delete_yes__", type="primary"):
+                            try:
+                                if kind == 'category':
+                                    db.delete_category(cd['id'])
+                                    if st.session_state.get('filter_cat_id') == cd['id']:
+                                        st.session_state.pop('filter_cat_id', None)
+                                elif kind == 'task':
+                                    db.delete_task(cd['id'])
+                                elif kind == 'subtask':
+                                    db.delete_subtask(cd['id'])
+                                elif kind == 'timelog':
+                                    db.delete_time_log(cd['id'])
+                            finally:
+                                st.session_state.pop('confirm_delete', None)
+                                st.rerun()
+                    with col_no:
+                        if st.button("Cancel", key="__confirm_delete_cancel__"):
+                            st.session_state.pop('confirm_delete', None)
+                            st.rerun()
+            except Exception:
+                modal_shown = False
+
+        # Fallback UI if st.modal is not available or failed: render an inline confirmation box
+        if not modal_shown:
+            box = st.container()
+            with box:
+                kind = cd.get('kind')
+                name = cd.get('name') or ''
+                st.markdown(f"### Confirm delete: {kind} — {name}")
+                st.markdown("This action cannot be undone.")
+                col_yes, col_no = st.columns([1, 1])
+                with col_yes:
+                    if st.button("Yes, delete", key="__confirm_delete_yes_fb__", type="primary"):
+                        try:
+                            if kind == 'category':
+                                db.delete_category(cd['id'])
+                                if st.session_state.get('filter_cat_id') == cd['id']:
+                                    st.session_state.pop('filter_cat_id', None)
+                            elif kind == 'task':
+                                db.delete_task(cd['id'])
+                            elif kind == 'subtask':
+                                db.delete_subtask(cd['id'])
+                            elif kind == 'timelog':
+                                db.delete_time_log(cd['id'])
+                        finally:
+                            st.session_state.pop('confirm_delete', None)
+                            st.rerun()
+                with col_no:
+                    if st.button("Cancel", key="__confirm_delete_cancel_fb__"):
                         st.session_state.pop('confirm_delete', None)
                         st.rerun()
-            with col_no:
-                if st.button("Cancel", key="__confirm_delete_cancel__"):
-                    st.session_state.pop('confirm_delete', None)
-                    st.rerun()
     
     # Fix dark mode styles for expanders inside tasks
     st.markdown(f"""
