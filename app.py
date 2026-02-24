@@ -49,6 +49,8 @@ st.markdown(f"""
         transition: background-color 0.3s ease, color 0.3s ease;
     }}
     .main .block-container {{ background-color: {_bg} !important; padding-top:1.5rem; }}
+    /* Move sidebar content up and tighten spacing */
+    section[data-testid="stSidebar"] .block-container {{ padding-top:0.25rem !important; }}
     h1,h2,h3,h4,h5,h6 {{ color: {_head} !important; }}
     .stMarkdown p, .stMarkdown span {{ color: {_text}; }}
 
@@ -71,6 +73,8 @@ st.markdown(f"""
         background-color: {_sidebar} !important;
         border-right: 1px solid {_border} !important;
     }}
+    /* Tighten button spacing inside sidebar */
+    section[data-testid="stSidebar"] .stButton {{ margin-top:0.25rem !important; margin-bottom:0.25rem !important; }}
     [data-testid="stSidebar"] * {{ color: {_text} !important; }}
     [data-testid="stSidebar"] .stMarkdown h3 {{
         color: {_head} !important; font-size:1rem; font-weight:600; margin-top:1rem;
@@ -402,11 +406,11 @@ if not is_authenticated():
 # Sidebar navigation
 with st.sidebar:
     st.markdown(
-        f"""<div style='padding:0.5rem 0; margin-bottom:0.75rem;'>
-            <div style='font-size:1.3rem; font-weight:700; color:{_head};'>
+        f"""<div style='padding:0.25rem 0; margin-bottom:0.25rem;'>
+            <div style='font-size:1.25rem; font-weight:700; color:{_head}; margin-top:0rem;'>
                 📋 My Planner
             </div>
-            <div style='font-size:0.85rem; color:{_muted};'>
+            <div style='font-size:0.82rem; color:{_muted};'>
                 Welcome, {st.session_state.get('display_name', 'User')}
             </div>
         </div>""",
