@@ -48,7 +48,7 @@ st.markdown(f"""
         background-color: {_bg} !important;
         transition: background-color 0.3s ease, color 0.3s ease;
     }}
-    .main .block-container {{ background-color: {_bg} !important; padding-top:1.5rem; }}
+    .main .block-container {{ background-color: {_bg} !important; padding-top:0.75rem; }}
     h1,h2,h3,h4,h5,h6 {{ color: {_head} !important; }}
     .stMarkdown p, .stMarkdown span {{ color: {_text}; }}
 
@@ -80,7 +80,7 @@ st.markdown(f"""
     [data-testid="stExpander"] {{
         background-color: {_surface} !important;
         border: 1px solid {_border} !important;
-        border-radius: 12px; margin-bottom: 0.5rem; color: {_text} !important;
+        border-radius: 12px; margin-bottom: 0.25rem; color: {_text} !important;
     }}
     [data-testid="stExpander"] summary {{
         color: {_head} !important;
@@ -402,7 +402,7 @@ if not is_authenticated():
 # Sidebar navigation
 with st.sidebar:
     st.markdown(
-        f"""<div style='padding:0.5rem 0; margin-bottom:0.75rem;'>
+        f"""<div style='padding:0.25rem 0; margin-bottom:0.5rem;'>
             <div style='font-size:1.3rem; font-weight:700; color:{_head};'>
                 📋 My Planner
             </div>
