@@ -505,6 +505,8 @@ def render_tasks_page():
         for k in list(st.session_state.keys()):
             if k.startswith('sub_open_') or k.startswith('log_open_'):
                 st.session_state[k] = False
+        # Also ensure the Add Task fragment is closed when returning to Tasks
+        st.session_state['add_task_open'] = False
         st.session_state['_tasks_initialized'] = True
     
     # If a delete confirmation was requested elsewhere, show a modal here
