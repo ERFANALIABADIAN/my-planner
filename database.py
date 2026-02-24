@@ -888,11 +888,11 @@ def get_session_user(token: str):
     from datetime import datetime
     now = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
     return _query(
-        """SELECT u.id, u.username, u.display_name
-           FROM user_sessions s
-           JOIN users u ON u.id = s.user_id
-           WHERE s.token = ? AND s.expires_at > ?""",
-        [token, now], fetch="one"
+          """SELECT u.id, u.username, u.display_name, u.theme
+              FROM user_sessions s
+              JOIN users u ON u.id = s.user_id
+              WHERE s.token = ? AND s.expires_at > ?""",
+          [token, now], fetch="one"
     )
 
 

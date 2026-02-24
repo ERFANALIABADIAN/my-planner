@@ -100,6 +100,8 @@ def is_authenticated() -> bool:
                 st.session_state['user_id'] = user['id']
                 st.session_state['username'] = user['username']
                 st.session_state['display_name'] = user['display_name']
+                # Restore saved theme preference when restoring session from token
+                st.session_state['theme'] = user.get('theme', 'light') or 'light'
                 st.session_state['_session_token'] = token
                 return True
         except Exception:
