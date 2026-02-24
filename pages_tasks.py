@@ -131,28 +131,66 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             }
             </style>""", unsafe_allow_html=True)
 
-            for sub in subtasks:
+            # Separate undone and completed subtasks so we can hide completed ones by default
+            undone_subs = [s for s in subtasks if not s['is_done']]
+            done_subs = [s for s in subtasks if s['is_done']]
+
+            # Render undone subtasks as before
+            for sub in undone_subs:
                 col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
                 with col_check:
                     st.checkbox(
-                        "done", value=bool(sub['is_done']),
+                        "done", value=False,
                         key=f"sub_{sub['id']}",
                         label_visibility="collapsed",
                         on_change=_subtask_toggle_cb,
-                        # Pass sub_id AND task_id to callback
                         args=(sub['id'], task_id)
                     )
                 with col_name:
-                    strike = "line-through" if sub['is_done'] else "none"
-                    color  = muted_col if sub['is_done'] else text_col
                     st.markdown(
-                        f"<div style='display:flex; align-items:center; min-height:1.8rem;"
-                        f" text-decoration:{strike}; color:{color};'>{sub['title']}</div>",
+                        f"<div style='display:flex; align-items:center; min-height:1.8rem; color:{text_col};'>{sub['title']}</div>",
                         unsafe_allow_html=True
                     )
                 with col_sub_del:
                     if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                         request_delete('subtask', sub['id'], sub.get('title') or '')
+
+            # Completed subtasks: hidden by default, toggle to reveal
+            comp_key = f'completed_sub_open_{task_id}'
+            if comp_key not in st.session_state:
+                st.session_state[comp_key] = False
+            comp_open = st.session_state[comp_key]
+
+            if done_subs:
+                if st.button(("▼ " if comp_open else "") + f"Completed Subtasks ({len(done_subs)})",
+                             key=f"btn_toggle_comp_{task_id}", use_container_width=True, type="secondary"):
+                    st.session_state[comp_key] = not comp_open
+                    st.rerun()
+
+                if st.session_state[comp_key]:
+                    for sub in done_subs:
+                        col_check, col_name, col_actions = st.columns([0.5, 6, 1])
+                        with col_check:
+                            # Show checked box that can be toggled to mark undone
+                            st.checkbox("done", value=True, key=f"sub_done_{sub['id']}", label_visibility="collapsed",
+                                        on_change=_subtask_toggle_cb, args=(sub['id'], task_id))
+                        with col_name:
+                            st.markdown(
+                                f"<div style='display:flex; align-items:center; min-height:1.8rem; text-decoration:line-through; color:{muted_col};'>{sub['title']}</div>",
+                                unsafe_allow_html=True
+                            )
+                        with col_actions:
+                            # Restore button (mark as not done)
+                            if st.button("↩️", key=f"restore_sub_{sub['id']}", help="Restore", type="tertiary"):
+                                try:
+                                    db.toggle_subtask(sub['id'])
+                                    db.get_subtasks.clear()
+                                    db.get_task_by_id.clear()
+                                except Exception:
+                                    pass
+                                st.rerun()
+                            if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
+                                request_delete('subtask', sub['id'], sub.get('title') or '')
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
