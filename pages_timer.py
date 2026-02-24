@@ -8,6 +8,11 @@ import streamlit.components.v1 as components
 from datetime import datetime, date
 import database as db
 
+# Helper to request confirmation before deleting items (local to timer page)
+def request_delete(kind: str, obj_id: int, name: str = None):
+    st.session_state['confirm_delete'] = {'kind': kind, 'id': obj_id, 'name': name}
+    st.rerun()
+
 # Keep the session alive every 3 minutes when the timer is running.
 # streamlit-autorefresh is already in requirements.txt.
 try:
@@ -186,6 +191,33 @@ def render_timer_page():
             st.session_state['timer_subtask_select'] = correct_sub_label
 
     # Render the interactive timer dashboard as a fragment for high performance
+    # If a delete confirmation was requested elsewhere, show a modal here
+    if st.session_state.get('confirm_delete'):
+        cd = st.session_state['confirm_delete']
+        with st.modal("Confirm Deletion"):
+            kind = cd.get('kind')
+            name = cd.get('name') or ''
+            st.markdown(f"Are you sure you want to delete **{kind}**: **{name}**? This action cannot be undone.")
+            col_yes, col_no = st.columns([1, 1])
+            with col_yes:
+                if st.button("Yes, delete", key="__timer_confirm_delete_yes__", type="primary"):
+                    try:
+                        if kind == 'timelog':
+                            db.delete_time_log(cd['id'])
+                        elif kind == 'task':
+                            db.delete_task(cd['id'])
+                        elif kind == 'subtask':
+                            db.delete_subtask(cd['id'])
+                        elif kind == 'category':
+                            db.delete_category(cd['id'])
+                    finally:
+                        st.session_state.pop('confirm_delete', None)
+                        st.rerun()
+            with col_no:
+                if st.button("Cancel", key="__timer_confirm_delete_cancel__"):
+                    st.session_state.pop('confirm_delete', None)
+                    st.rerun()
+
     _render_timer_dashboard(user_id, tasks, task_options)
 
     # ─── Today's Sessions ─────────────────────────────────────
@@ -475,8 +507,8 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                 st.markdown(f"{source_icon} **{time_display}**")
             with col_del:
                 if st.button("🗑️", key=f"del_log_{log['id']}", help="Delete session", type="tertiary"):
-                    db.delete_time_log(log['id'])
-                    st.rerun()
+                    # Request confirmation first
+                    request_delete('timelog', log['id'], f"{log.get('task_title')} ({log.get('duration_minutes')}m)")
     else:
         st.markdown(
             """<div style='text-align:center; padding:2rem; color:#9CA3AF;'>

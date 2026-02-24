@@ -7,6 +7,10 @@ from datetime import date
 import database as db
 import time
 
+# Helper to request confirmation before deleting items
+def request_delete(kind: str, obj_id: int, name: str = None):
+    st.session_state['confirm_delete'] = {'kind': kind, 'id': obj_id, 'name': name}
+    st.rerun()
 # ─── Icon picker options ────────────────────────────────────────────
 ICONS = [
     "📁", "📂", "📋", "📌", "📍", "🗂", "🖥", "💻", "📱",
@@ -148,8 +152,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     )
                 with col_sub_del:
                     if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
-                        db.delete_subtask(sub['id'])
-                        st.rerun()  # Fragment rerun
+                        request_delete('subtask', sub['id'], sub.get('title') or '')
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
@@ -333,15 +336,8 @@ def _render_task_item(task, user_id, categories, text_col, muted_col, card_bg, d
             with col_a3:
                 # Delete triggers a full app rerun because the list structure changes
                 if st.button("🗑️", key=f"del_task_{task['id']}", help="Delete", type="tertiary"):
-                    db.delete_task(task['id'])
-                    # We can try to just return and let the fragment hide itself, 
-                    # but the container remains. Better to trigger full rerun.
-                    # Wait, st.rerun() inside fragment reruns fragment.
-                    # To rerun app, we need to modify a top-level state or hack it?
-                    # Actually, if we delete it, db.get_task_by_id returns None, so we return immediately.
-                    # The fragment renders nothing. The container is empty.
-                    # This is visually fine!
-                    st.rerun()
+                    request_delete('task', task['id'], task.get('title') or '')
+                    # The modal will run at top-level and perform the actual delete if confirmed.
 
         # Edit task inline
         if st.session_state.get(f'editing_task_{task["id"]}', False):
@@ -473,6 +469,35 @@ def render_tasks_page():
                 st.session_state[k] = False
         st.session_state['_tasks_initialized'] = True
     
+    # If a delete confirmation was requested elsewhere, show a modal here
+    if st.session_state.get('confirm_delete'):
+        cd = st.session_state['confirm_delete']
+        with st.modal("Confirm Deletion"):
+            kind = cd.get('kind')
+            name = cd.get('name') or ''
+            st.markdown(f"Are you sure you want to delete **{kind}**: **{name}**? This action cannot be undone.")
+            col_yes, col_no = st.columns([1, 1])
+            with col_yes:
+                if st.button("Yes, delete", key="__confirm_delete_yes__", type="primary"):
+                    try:
+                        if kind == 'category':
+                            db.delete_category(cd['id'])
+                            if st.session_state.get('filter_cat_id') == cd['id']:
+                                st.session_state.pop('filter_cat_id', None)
+                        elif kind == 'task':
+                            db.delete_task(cd['id'])
+                        elif kind == 'subtask':
+                            db.delete_subtask(cd['id'])
+                        elif kind == 'timelog':
+                            db.delete_time_log(cd['id'])
+                    finally:
+                        st.session_state.pop('confirm_delete', None)
+                        st.rerun()
+            with col_no:
+                if st.button("Cancel", key="__confirm_delete_cancel__"):
+                    st.session_state.pop('confirm_delete', None)
+                    st.rerun()
+    
     # Fix dark mode styles for expanders inside tasks
     st.markdown(f"""
     <style>
@@ -525,10 +550,9 @@ def render_tasks_page():
                         st.rerun()
                 with col_del:
                     if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
-                        db.delete_category(cat['id'])
-                        if st.session_state.get('filter_cat_id') == cat['id']:
-                            st.session_state.pop('filter_cat_id', None)
-                        st.rerun()
+                        request_delete('category', cat['id'], cat.get('name') or '')
+                        # If deletion confirmed we'll clear filter inside modal handler
+                        
         else:
             st.info("No categories yet. Create one above!")
 
