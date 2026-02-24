@@ -6,7 +6,7 @@ Run with: streamlit run app.py
 import streamlit as st
 from database import init_db, update_user_theme
 from auth import is_authenticated, render_login_page, logout_user
-from pages_tasks import render_tasks_page
+from pages_tasks import render_tasks_page, render_sidebar
 from pages_timer import render_timer_page
 from pages_analytics import render_analytics_page
 
@@ -442,6 +442,9 @@ with st.sidebar:
 
     # Smaller separator before content
     st.write("")
+
+    # Render the categories area (kept consistent across pages)
+    render_sidebar(st.session_state['user_id'])
 
 
 # ─── Page Router ──────────────────────────────────────────────

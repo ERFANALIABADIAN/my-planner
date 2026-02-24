@@ -100,6 +100,46 @@ def _render_sidebar_new_category(user_id, text_col):
                     st.warning("Enter a name.")
 
 
+def render_sidebar(user_id):
+    """Render the Categories area in the sidebar. This is called from app.py so the sidebar
+    is present across all pages (Tasks, Timer, Analytics)."""
+    # Theme-aware colors
+    _dark = st.session_state.get('theme', 'light') == 'dark'
+    _text_col = "#E5E7EB" if _dark else "#374151"
+
+    st.markdown("### 📁 Categories")
+    _render_sidebar_new_category(user_id, _text_col)
+
+    categories = db.get_categories(user_id)
+    if categories:
+        cat_options = {f"{c['icon']} {c['name']}": c['id'] for c in categories}
+        main_cat = st.session_state.get('main_cat_filter', "All Categories")
+        filter_id = cat_options.get(main_cat, None) if main_cat != "All Categories" else None
+        for cat in categories:
+            col_cat, col_del = st.columns([0.85, 0.15])
+            with col_cat:
+                is_active = filter_id == cat['id']
+                btn_style = "primary" if is_active else "secondary"
+                if st.button(
+                    f"{cat['icon']} {cat['name']}",
+                    key=f"sidebar_cat_{cat['id']}",
+                    use_container_width=True,
+                    type=btn_style
+                ):
+                    if is_active:
+                        st.session_state.pop('filter_cat_id', None)
+                        st.session_state['main_cat_filter'] = "All Categories"
+                    else:
+                        st.session_state['filter_cat_id'] = cat['id']
+                        st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
+                    st.rerun()
+            with col_del:
+                if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
+                    request_delete('category', cat['id'], cat.get('name') or '')
+    else:
+        st.info("No categories yet. Create one above!")
+
+
 def _render_subtask_section(task_id, subtasks, text_col, muted_col):
     """Subtasks panel helper (called within task fragment)."""
     sub_label = f"Subtasks ({sum(1 for s in subtasks if s['is_done'])}/{len(subtasks)})" if subtasks else "Add Subtasks"
@@ -583,46 +623,7 @@ def render_tasks_page():
     </style>
     """, unsafe_allow_html=True)
 
-    # ─── Sidebar: Category Management ─────────────────────────
-    with st.sidebar:
-        st.markdown("### 📁 Categories")
-
-        # ── New Category toggle (Fragment) ────────────────────────────────
-        _render_sidebar_new_category(user_id, _text_col)
-
-        # Category list – click to filter, trash to delete
-        if categories:
-            # Always sync filter_id to match main_cat_filter (selectbox) for highlight
-            cat_options = {f"{c['icon']} {c['name']}": c['id'] for c in categories}
-            main_cat = st.session_state.get('main_cat_filter', "All Categories")
-            filter_id = cat_options.get(main_cat, None) if main_cat != "All Categories" else None
-            for cat in categories:
-                col_cat, col_del = st.columns([0.85, 0.15])
-                with col_cat:
-                    is_active = filter_id == cat['id']
-                    btn_style = "primary" if is_active else "secondary"
-                    if st.button(
-                        f"{cat['icon']} {cat['name']}",
-                        key=f"sidebar_cat_{cat['id']}",
-                        use_container_width=True,
-                        type=btn_style
-                    ):
-                        # Toggle filter; also sync the main dropdown widget and immediately rerun
-                        if is_active:
-                            st.session_state.pop('filter_cat_id', None)
-                            st.session_state['main_cat_filter'] = "All Categories"
-                        else:
-                            st.session_state['filter_cat_id'] = cat['id']
-                            st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
-                        # Ensure the UI updates immediately to reflect the new selection
-                        st.rerun()
-                with col_del:
-                    if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
-                        request_delete('category', cat['id'], cat.get('name') or '')
-                        # If deletion confirmed we'll clear filter inside modal handler
-                        
-        else:
-            st.info("No categories yet. Create one above!")
+    # Sidebar rendering is moved to render_sidebar(user_id) so it can be shown on all pages.
 
     # ─── Main Content: Tasks ──────────────────────────────────
     st.markdown("## 📋 My Tasks")
