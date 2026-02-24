@@ -507,6 +507,24 @@ if HAS_STREAMLIT:
         return _query(
             "SELECT * FROM subtasks WHERE task_id = ? ORDER BY sort_order, created_at", [task_id]
         )
+
+
+    def get_subtasks_for_tasks(task_ids: list):
+        """Fetch subtasks for multiple task ids in a single query.
+
+        Returns a dict mapping task_id -> list of subtasks.
+        """
+        if not task_ids:
+            return {}
+        # Ensure unique ids and preserve as list for params
+        ids = list(dict.fromkeys(int(i) for i in task_ids))
+        placeholders = ",".join(["?" for _ in ids])
+        query = f"SELECT * FROM subtasks WHERE task_id IN ({placeholders}) ORDER BY task_id, sort_order, created_at"
+        rows = _query(query, ids)
+        mapping = {}
+        for r in rows:
+            mapping.setdefault(r['task_id'], []).append(r)
+        return mapping
 else:
     def get_subtasks(task_id: int):
         return _query(

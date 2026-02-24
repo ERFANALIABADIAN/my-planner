@@ -253,16 +253,17 @@ def _render_log_time_section(user_id, task_id, task_title):
         
 
 @st.fragment
-def _render_task_item(task_id, user_id, categories, text_col, muted_col, card_bg, done_bg):
-    """Fragment for a single task row. Handles its own updates (Done/Undo/Edit/Subtasks/LogTime)."""
-    # Fetch fresh task state
-    task = db.get_task_by_id(task_id)
+def _render_task_item(task, user_id, categories, text_col, muted_col, card_bg, done_bg, subtasks=None):
+    """Fragment for a single task row. Accepts a pre-fetched `task` dict and optional `subtasks` list
+    to avoid N+1 database queries when rendering task lists.
+    """
     if not task:
-        return  # Task deleted
+        return
 
-    # Fetch fresh subtasks
-    subtasks = db.get_subtasks(task_id)
-    
+    # Use provided subtasks mapping/list if available, otherwise fetch for this task
+    if subtasks is None:
+        subtasks = db.get_subtasks(task['id'])
+
     # Calculate progress
     total_time = task.get('total_time', 0)
     done_count = sum(1 for s in subtasks if s['is_done'])
@@ -593,6 +594,13 @@ def render_tasks_page():
     # Sidebar-to-main immediate sync is handled in the button click handler;
     # remove any unconditional rerun to avoid double-rerun behavior.
 
+    # Prefetch subtasks for all tasks to avoid N+1 queries
+    task_ids = [t['id'] for t in tasks]
+    subtasks_map = db.get_subtasks_for_tasks(task_ids)
+
     for task in tasks:
         # Render each task as an isolated fragment for high performance
-        _render_task_item(task['id'], user_id, categories, _text_col, _muted_col, _card_bg, _done_bg)
+        _render_task_item(
+            task, user_id, categories, _text_col, _muted_col, _card_bg, _done_bg,
+            subtasks=subtasks_map.get(task['id'], [])
+        )
