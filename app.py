@@ -48,7 +48,7 @@ st.markdown(f"""
         background-color: {_bg} !important;
         transition: background-color 0.3s ease, color 0.3s ease;
     }}
-    .main .block-container {{ background-color: {_bg} !important; padding-top:0.75rem; }}
+    .main .block-container {{ background-color: {_bg} !important; padding-top:0.60rem; }}
     h1,h2,h3,h4,h5,h6 {{ color: {_head} !important; }}
     .stMarkdown p, .stMarkdown span {{ color: {_text}; }}
 
