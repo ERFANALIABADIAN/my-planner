@@ -180,17 +180,20 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 unsafe_allow_html=True
                             )
                         with col_actions:
-                            # Restore button (mark as not done)
-                            if st.button("↩️", key=f"restore_sub_{sub['id']}", help="Restore", type="tertiary"):
-                                try:
-                                    db.toggle_subtask(sub['id'])
-                                    db.get_subtasks.clear()
-                                    db.get_task_by_id.clear()
-                                except Exception:
-                                    pass
-                                st.rerun()
-                            if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
-                                request_delete('subtask', sub['id'], sub.get('title') or '')
+                            # Place restore and delete side-by-side
+                            act_col1, act_col2 = st.columns([1, 1], gap="small")
+                            with act_col1:
+                                if st.button("↩️", key=f"restore_sub_{sub['id']}", help="Restore", type="tertiary"):
+                                    try:
+                                        db.toggle_subtask(sub['id'])
+                                        db.get_subtasks.clear()
+                                        db.get_task_by_id.clear()
+                                    except Exception:
+                                        pass
+                                    st.rerun()
+                            with act_col2:
+                                if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
+                                    request_delete('subtask', sub['id'], sub.get('title') or '')
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
