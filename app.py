@@ -414,13 +414,7 @@ with st.sidebar:
     )
 
     # ── Dark / Light toggle
-    _toggle_label = "☀️ Light Mode" if _dark else "🌙 Dark Mode"
-    if st.button(_toggle_label, use_container_width=True, type="secondary", key="theme_toggle"):
-        new_theme = 'light' if _dark else 'dark'
-        st.session_state['theme'] = new_theme
-        if is_authenticated():
-            update_user_theme(st.session_state['user_id'], new_theme)
-        st.rerun()
+    pass
 
     st.markdown("---")
 
@@ -461,6 +455,15 @@ elif current_page == 'analytics':
 with st.sidebar:
     st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)
     st.markdown("---")
+
+    # Theme toggle placed above refresh/logout (keeps same style as before)
+    _toggle_label = "☀️ Light Mode" if _dark else "🌙 Dark Mode"
+    if st.button(_toggle_label, use_container_width=True, type="secondary", key="theme_toggle"):
+        new_theme = 'light' if _dark else 'dark'
+        st.session_state['theme'] = new_theme
+        if is_authenticated():
+            update_user_theme(st.session_state['user_id'], new_theme)
+        st.rerun()
 
     col_refresh, col_logout = st.sidebar.columns(2)
     with col_refresh:
