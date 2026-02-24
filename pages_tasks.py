@@ -126,6 +126,8 @@ def render_sidebar(user_id):
                     use_container_width=True,
                     type=btn_style
                 ):
+                    # Ensure clicking a category always navigates to Tasks page
+                    st.session_state['current_page'] = 'tasks'
                     if is_active:
                         st.session_state.pop('filter_cat_id', None)
                         st.session_state['main_cat_filter'] = "All Categories"
