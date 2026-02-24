@@ -404,7 +404,8 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                             st.session_state.get('timer_subtask_id')
                         )
                         st.session_state['db_synced'] = True
-                        # st.rerun() # NO RERUN
+                        # Ensure UI switches to running immediately
+                        st.rerun()
                 with col_stop:
                     if st.button("⏹ Stop & Save", use_container_width=True, key="stop_paused"):
                         final_elapsed = st.session_state.get('timer_paused_elapsed', 0)
@@ -439,7 +440,8 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                         False, mode_str, pom_mins, 
                         st.session_state.get('timer_subtask_id')
                     )
-                    # st.rerun() # NO RERUN
+                    # Ensure UI shows paused state immediately
+                    st.rerun()
 
             with col_stop:
                 if st.button("⏹ Stop & Save", use_container_width=True, type="primary", key="stop_running"):
