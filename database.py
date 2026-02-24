@@ -405,7 +405,7 @@ def delete_category(cat_id: int):
 # ─── Task Operations ───────────────────────────────────────────────────────────
 
 if HAS_STREAMLIT:
-    @st.cache_data(ttl=20, show_spinner=False)
+    @st.cache_data(ttl=120, show_spinner=False)
     def get_tasks(user_id: int, category_id: int = None, status: str = None):
         query = """
             SELECT t.*, 
@@ -586,7 +586,7 @@ def add_time_log(user_id: int, task_id: int, duration_minutes: float,
 
 
 if HAS_STREAMLIT:
-    @st.cache_data(ttl=15, show_spinner=False)
+    @st.cache_data(ttl=120, show_spinner=False)
     def get_time_logs(user_id: int, task_id: int = None, start_date: str = None,
                       end_date: str = None):
         query = """
