@@ -40,7 +40,7 @@ else:
     _input = "#FFFFFF"
 
 # ─── Custom Styling ──────────────────────────────────────────
-st.markdown(f"""
+    st.markdown(f"""
 <style>
     /* Clean, minimal look */
     .stApp {{
@@ -74,6 +74,21 @@ st.markdown(f"""
     [data-testid="stSidebar"] * {{ color: {_text} !important; }}
     [data-testid="stSidebar"] .stMarkdown h3 {{
         color: {_head} !important; font-size:1rem; font-weight:600; margin-top:1rem;
+    }}
+    /* Tighten the top header area so it sits closer to the sidebar collapse control */
+    section[data-testid="stSidebar"] > div:first-child {{
+        padding: 0.25rem 0.75rem !important;
+        margin-bottom: 0.5rem !important;
+        display: flex; align-items: center; gap: 0.5rem;
+    }}
+    /* Make sidebar buttons more compact and evenly spaced */
+    section[data-testid="stSidebar"] .stButton {{
+        margin-top: 0.25rem !important; margin-bottom: 0.5rem !important;
+    }}
+    /* Reduce space before the footer and make it match button spacing */
+    section[data-testid="stSidebar"] > div:last-child {{
+        padding-top: 0.25rem !important;
+        margin-top: 0.25rem !important;
     }}
 
     /* Card-like containers */
@@ -402,11 +417,11 @@ if not is_authenticated():
 # Sidebar navigation
 with st.sidebar:
     st.markdown(
-        f"""<div style='padding:0.5rem 0; margin-bottom:0.75rem;'>
-            <div style='font-size:1.3rem; font-weight:700; color:{_head};'>
+        f"""<div style='padding:0.25rem 0; margin-bottom:0.5rem;'>
+            <div style='font-size:1.15rem; font-weight:700; color:{_head};'>
                 📋 My Planner
             </div>
-            <div style='font-size:0.85rem; color:{_muted};'>
+            <div style='font-size:0.82rem; color:{_muted};'>
                 Welcome, {st.session_state.get('display_name', 'User')}
             </div>
         </div>""",
