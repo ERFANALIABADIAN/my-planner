@@ -184,7 +184,8 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
 
             # Render undone subtasks as before
             for sub in undone_subs:
-                col_check, col_name, col_sub_del = st.columns([0.5, 6, 0.5])
+                # Align subtask actions with task action column by reserving a wider action column
+                col_check, col_name, col_actions = st.columns([0.5, 6, 1])
                 with col_check:
                     st.checkbox(
                         "done", value=False,
@@ -215,14 +216,14 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                             f"<div style='display:flex; align-items:center; min-height:1.8rem; color:{text_col};'>{sub['title']}</div>",
                             unsafe_allow_html=True
                         )
-                with col_sub_del:
-                    # Place edit and delete buttons inline using nested columns
-                    btn_col_edit, btn_col_del = st.columns([1, 1], gap="small")
-                    with btn_col_edit:
+                with col_actions:
+                    # Use three equal nested columns to mirror task action placement
+                    act_a1, act_a2, act_a3 = st.columns([1, 1, 1], gap="small")
+                    with act_a2:
                         if st.button("✏️", key=f"edit_sub_{sub['id']}", help="Edit", type="tertiary"):
                             st.session_state[f"editing_sub_{sub['id']}"] = True
                             st.rerun()
-                    with btn_col_del:
+                    with act_a3:
                         if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                             request_delete('subtask', sub['id'], sub.get('title') or '')
 
@@ -240,6 +241,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
 
                 if st.session_state[comp_key]:
                     for sub in done_subs:
+                        # Align completed subtask actions with task action column
                         col_check, col_name, col_actions = st.columns([0.5, 6, 1])
                         with col_check:
                             # Show checked box that can be toggled to mark undone
@@ -251,13 +253,13 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 unsafe_allow_html=True
                             )
                         with col_actions:
-                            # Place edit and delete inline for completed subtasks
-                            act_col_edit, act_col_del = st.columns([1, 1], gap="small")
-                            with act_col_edit:
+                            # Mirror task action placement using three nested columns
+                            act_a1, act_a2, act_a3 = st.columns([1, 1, 1], gap="small")
+                            with act_a2:
                                 if st.button("✏️", key=f"edit_done_sub_{sub['id']}", help="Edit", type="tertiary"):
                                     st.session_state[f"editing_sub_{sub['id']}"] = True
                                     st.rerun()
-                            with act_col_del:
+                            with act_a3:
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
