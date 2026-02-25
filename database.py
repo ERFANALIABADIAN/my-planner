@@ -482,8 +482,17 @@ def update_task(task_id: int, **kwargs):
         get_tasks.clear()
         get_task_by_id.clear()
     allowed = {'title', 'description', 'status', 'priority', 'category_id', 'sort_order'}
+    # Allow updating goal_minutes as well
+    allowed = allowed.union({'goal_minutes'})
     for key, val in kwargs.items():
         if key in allowed and val is not None:
+            # Ensure numeric values for goal_minutes are stored correctly
+            if key == 'goal_minutes':
+                try:
+                    val = float(val)
+                except Exception:
+                    # If conversion fails, skip update for this field
+                    continue
             _query(f"UPDATE tasks SET {key} = ? WHERE id = ?", [val, task_id], fetch="none")
     if kwargs.get('status') == 'completed':
         _query("UPDATE tasks SET completed_at = ? WHERE id = ?",
