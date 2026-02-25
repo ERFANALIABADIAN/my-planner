@@ -134,8 +134,11 @@ def render_sidebar(user_id):
                     else:
                         st.session_state['filter_cat_id'] = cat['id']
                         st.session_state['main_cat_filter'] = f"{cat['icon']} {cat['name']}"
-                    # Close Add Task panel when switching categories so UI stays consistent
+                    # Close Add Task panel and any open subtask/log panels when switching categories
                     st.session_state['add_task_open'] = False
+                    for _k in list(st.session_state.keys()):
+                        if _k.startswith('sub_open_') or _k.startswith('log_open_') or _k.startswith('completed_sub_open_'):
+                            st.session_state[_k] = False
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
@@ -653,8 +656,11 @@ def render_tasks_page():
         def on_cat_change():
             sel = st.session_state['main_cat_filter']
             st.session_state['filter_cat_id'] = cat_options.get(sel)
-            # Also close the Add Task panel when changing the category filter
+            # Also close the Add Task panel and any open subtask/log panels when changing the category filter
             st.session_state['add_task_open'] = False
+            for _k in list(st.session_state.keys()):
+                if _k.startswith('sub_open_') or _k.startswith('log_open_') or _k.startswith('completed_sub_open_'):
+                    st.session_state[_k] = False
 
         selected_cat_name = st.selectbox(
             "Filter by Category",
