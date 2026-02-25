@@ -182,48 +182,52 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
             undone_subs = [s for s in subtasks if not s['is_done']]
             done_subs = [s for s in subtasks if s['is_done']]
 
-            # Render undone subtasks as before
+            # Render undone subtasks aligned to the task column layout so actions match
             for sub in undone_subs:
-                # Align subtask actions with task action column by reserving a wider action column
-                col_check, col_name, col_actions = st.columns([0.5, 6, 1])
-                with col_check:
-                    st.checkbox(
-                        "done", value=False,
-                        key=f"sub_{sub['id']}",
-                        label_visibility="collapsed",
-                        on_change=_subtask_toggle_cb,
-                        args=(sub['id'], task_id)
-                    )
-                with col_name:
-                    edit_key = f"editing_sub_{sub['id']}"
-                    # If editing, show inline form, otherwise show title
-                    if st.session_state.get(edit_key, False):
-                        with st.form(f"edit_sub_form_{sub['id']}"):
-                            new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
-                            col_save, col_cancel = st.columns([1, 1])
-                            with col_save:
-                                if st.form_submit_button("Save", type="primary"):
-                                    if new_title.strip():
-                                        db.update_subtask(sub['id'], new_title.strip())
-                                    st.session_state.pop(edit_key, None)
-                                    st.rerun()
-                            with col_cancel:
-                                if st.form_submit_button("Cancel"):
-                                    st.session_state.pop(edit_key, None)
-                                    st.rerun()
-                    else:
-                        st.markdown(
-                            f"<div style='display:flex; align-items:center; min-height:1.8rem; color:{text_col};'>{sub['title']}</div>",
-                            unsafe_allow_html=True
+                col_a, col_b, col_actions = st.columns([5, 2, 2])
+                # Left area: checkbox + title (keeps spacing aligned with task rows)
+                with col_a:
+                    inner_check, inner_name = st.columns([0.5, 11])
+                    with inner_check:
+                        st.checkbox(
+                            "done", value=False,
+                            key=f"sub_{sub['id']}",
+                            label_visibility="collapsed",
+                            on_change=_subtask_toggle_cb,
+                            args=(sub['id'], task_id)
                         )
+                    with inner_name:
+                        edit_key = f"editing_sub_{sub['id']}"
+                        if st.session_state.get(edit_key, False):
+                            with st.form(f"edit_sub_form_{sub['id']}"):
+                                new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
+                                col_save, col_cancel = st.columns([1, 1])
+                                with col_save:
+                                    if st.form_submit_button("Save", type="primary"):
+                                        if new_title.strip():
+                                            db.update_subtask(sub['id'], new_title.strip())
+                                        st.session_state.pop(edit_key, None)
+                                        st.rerun()
+                                with col_cancel:
+                                    if st.form_submit_button("Cancel"):
+                                        st.session_state.pop(edit_key, None)
+                                        st.rerun()
+                        else:
+                            st.markdown(
+                                f"<div style='display:flex; align-items:center; min-height:1.8rem; color:{text_col};'>{sub['title']}</div>",
+                                unsafe_allow_html=True
+                            )
+                # Middle column left intentionally blank to match task layout spacing
+                with col_b:
+                    st.write("")
+                # Actions column: place edit and delete inline so they line up with task actions
                 with col_actions:
-                    # Use three equal nested columns to mirror task action placement
-                    act_a1, act_a2, act_a3 = st.columns([1, 1, 1], gap="small")
-                    with act_a2:
+                    act_col_edit, act_col_del = st.columns([1, 1], gap="small")
+                    with act_col_edit:
                         if st.button("✏️", key=f"edit_sub_{sub['id']}", help="Edit", type="tertiary"):
                             st.session_state[f"editing_sub_{sub['id']}"] = True
                             st.rerun()
-                    with act_a3:
+                    with act_col_del:
                         if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                             request_delete('subtask', sub['id'], sub.get('title') or '')
 
@@ -241,25 +245,26 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
 
                 if st.session_state[comp_key]:
                     for sub in done_subs:
-                        # Align completed subtask actions with task action column
-                        col_check, col_name, col_actions = st.columns([0.5, 6, 1])
-                        with col_check:
-                            # Show checked box that can be toggled to mark undone
-                            st.checkbox("done", value=True, key=f"sub_done_{sub['id']}", label_visibility="collapsed",
-                                        on_change=_subtask_toggle_cb, args=(sub['id'], task_id))
-                        with col_name:
-                            st.markdown(
-                                f"<div style='display:flex; align-items:center; min-height:1.8rem; text-decoration:line-through; color:{muted_col};'>{sub['title']}</div>",
-                                unsafe_allow_html=True
-                            )
+                        col_a, col_b, col_actions = st.columns([5, 2, 2])
+                        with col_a:
+                            inner_check, inner_name = st.columns([0.5, 11])
+                            with inner_check:
+                                st.checkbox("done", value=True, key=f"sub_done_{sub['id']}", label_visibility="collapsed",
+                                            on_change=_subtask_toggle_cb, args=(sub['id'], task_id))
+                            with inner_name:
+                                st.markdown(
+                                    f"<div style='display:flex; align-items:center; min-height:1.8rem; text-decoration:line-through; color:{muted_col};'>{sub['title']}</div>",
+                                    unsafe_allow_html=True
+                                )
+                        with col_b:
+                            st.write("")
                         with col_actions:
-                            # Mirror task action placement using three nested columns
-                            act_a1, act_a2, act_a3 = st.columns([1, 1, 1], gap="small")
-                            with act_a2:
+                            act_col_edit, act_col_del = st.columns([1, 1], gap="small")
+                            with act_col_edit:
                                 if st.button("✏️", key=f"edit_done_sub_{sub['id']}", help="Edit", type="tertiary"):
                                     st.session_state[f"editing_sub_{sub['id']}"] = True
                                     st.rerun()
-                            with act_a3:
+                            with act_col_del:
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
