@@ -222,12 +222,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     st.write("")
                 # Actions column: place edit and delete inline so they line up with task actions
                 with col_actions:
-                    act_col_edit, act_col_del = st.columns([1, 1], gap="small")
-                    with act_col_edit:
+                    # Create three action slots so edit/delete align with task-level actions
+                    act_slot_1, act_slot_2, act_slot_3 = st.columns([1, 1, 1], gap="small")
+                    with act_slot_1:
+                        st.write("")
+                    with act_slot_2:
                         if st.button("✏️", key=f"edit_sub_{sub['id']}", help="Edit", type="tertiary"):
                             st.session_state[f"editing_sub_{sub['id']}"] = True
                             st.rerun()
-                    with act_col_del:
+                    with act_slot_3:
                         if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                             request_delete('subtask', sub['id'], sub.get('title') or '')
 
@@ -259,12 +262,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         with col_b:
                             st.write("")
                         with col_actions:
-                            act_col_edit, act_col_del = st.columns([1, 1], gap="small")
-                            with act_col_edit:
+                            # Three action slots to align with task actions (leave first empty)
+                            act_slot_1, act_slot_2, act_slot_3 = st.columns([1, 1, 1], gap="small")
+                            with act_slot_1:
+                                st.write("")
+                            with act_slot_2:
                                 if st.button("✏️", key=f"edit_done_sub_{sub['id']}", help="Edit", type="tertiary"):
                                     st.session_state[f"editing_sub_{sub['id']}"] = True
                                     st.rerun()
-                            with act_col_del:
+                            with act_slot_3:
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
