@@ -37,20 +37,6 @@ def _subtask_toggle_cb(sub_id: int, task_id: int):
     st.session_state[f'subtask_timer_{task_id}'] = time.time()
 
 
-def _new_sub_on_enter(task_id: int, rotating_key: str, ctr_key: str):
-    """Handler for Enter pressed inside the new subtask text input.
-
-    Creates the subtask (if non-empty), advances the rotating counter so the
-    input is cleared, and triggers a rerun to update the UI.
-    """
-    title = st.session_state.get(rotating_key, "")
-    if title and title.strip():
-        db.create_subtask(task_id, title.strip())
-        st.session_state[ctr_key] = st.session_state.get(ctr_key, 0) + 1
-    # Streamlit automatically reruns after an on_change callback,
-    # so calling `st.rerun()` here is unnecessary and produces a warning.
-
-
 
 @st.fragment
 def _render_sidebar_new_category(user_id, text_col):
@@ -252,8 +238,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                 rotating_key = f"new_sub_{task_id}_{ctr}"
                 new_sub_title = st.text_input(
                     "New subtask", placeholder="Add a subtask...",
-                    key=rotating_key, label_visibility="collapsed",
-                    on_change=_new_sub_on_enter, args=(task_id, rotating_key, ctr_key)
+                    key=rotating_key, label_visibility="collapsed"
                 )
             with col_add_sub:
                 if st.button("➕", key=f"add_sub_{task_id}"):
