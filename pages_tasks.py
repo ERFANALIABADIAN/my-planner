@@ -665,6 +665,17 @@ def render_tasks_page():
         )
         selected_cat_id = cat_options[selected_cat_name] # Already synced via on_change
 
+        # If the category filter changed, ensure any per-task panels are closed.
+        # This keeps behavior consistent with navigating between pages where we already
+        # reset `sub_open_*` and `log_open_*` keys.
+        prev_cat = st.session_state.get('_last_filter_cat_id', None)
+        if prev_cat != selected_cat_id:
+            for k in list(st.session_state.keys()):
+                if k.startswith('sub_open_') or k.startswith('log_open_') or k.startswith('completed_sub_open_'):
+                    st.session_state[k] = False
+            st.session_state['add_task_open'] = False
+            st.session_state['_last_filter_cat_id'] = selected_cat_id
+
 
     with col_status:
         status_filter = st.selectbox(
