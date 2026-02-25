@@ -651,6 +651,9 @@ def render_tasks_page():
         def on_cat_change():
             sel = st.session_state['main_cat_filter']
             st.session_state['filter_cat_id'] = cat_options.get(sel)
+            # If the Add Task fragment was open, close it when switching categories
+            if st.session_state.get('add_task_open'):
+                st.session_state['add_task_open'] = False
 
         selected_cat_name = st.selectbox(
             "Filter by Category",
