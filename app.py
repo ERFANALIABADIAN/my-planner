@@ -283,14 +283,61 @@ st.markdown(f"""
     }}
     /* Date input - all layers */
     .stDateInput > div > div > input,
-    div[data-testid="stDateInput"] input {{
-        background-color: {_input} !important; color: {_text} !important; border-color: {_border} !important;
-    }}
+    div[data-testid="stDateInput"] input {
+        background-color: {_input} !important;
+        color: {_text} !important;
+        border-color: {_border} !important;
+    }
     div[data-testid="stDateInput"] > div,
     div[data-testid="stDateInput"] [data-baseweb="input"],
-    div[data-testid="stDateInput"] [data-baseweb="base-input"] {{
+    div[data-testid="stDateInput"] [data-baseweb="base-input"] {
         background-color: {_input} !important;
         border-color: {_border} !important;
+    }
+
+    /* Date picker calendar popup (fix for dark mode) */
+    .stDateInput .css-1y4p8pa, /* outer calendar popup */
+    .stDateInput .css-1y4p8pa .DayPicker,
+    .stDateInput .css-1y4p8pa .DayPicker-Month {{
+        background-color: {_surface} !important;
+        color: {_text} !important;
+        border-radius: 12px !important;
+        border: 1px solid {_border} !important;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-NavButton {{
+        color: {_text} !important;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-Day {{
+        background: {_surface2} !important;
+        color: {_text} !important;
+        border-radius: 6px !important;
+        border: none !important;
+        transition: background 0.2s, color 0.2s;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-Day--today {{
+        border: 1px solid {_accent} !important;
+        color: {_accent} !important;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-Day--selected,
+    .stDateInput .css-1y4p8pa .DayPicker-Day:active,
+    .stDateInput .css-1y4p8pa .DayPicker-Day:focus {{
+        background: {_accent} !important;
+        color: #fff !important;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-Day:hover {{
+        background: {_surface} !important;
+        color: {_accent} !important;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-Caption > div {{
+        color: {_head} !important;
+    }}
+    .stDateInput .css-1y4p8pa .DayPicker-Weekday {{
+        color: {_muted} !important;
+    }}
+    /* Remove white border on calendar popup */
+    .stDateInput .css-1y4p8pa {{
+        box-shadow: 0 4px 24px rgba(0,0,0,0.45) !important;
+        border: 1px solid {_border} !important;
     }}
     /* Universal baseweb input fix for all fields in dark mode */
     [data-baseweb="input"],
