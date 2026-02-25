@@ -292,29 +292,6 @@ st.markdown(f"""
         background-color: {_input} !important;
         border-color: {_border} !important;
     }}
-    /* Calendar popover (fix for dark mode) */
-    html[data-theme="dark"] [data-baseweb="calendar"] {{
-        background: {_surface} !important;
-        color: {_text} !important;
-        border-radius: 12px !important;
-        border: 1px solid {_border} !important;
-    }}
-    html[data-theme="dark"] [data-baseweb="calendar"] * {{
-        color: {_text} !important;
-        background: transparent !important;
-    }}
-    html[data-theme="dark"] [data-baseweb="calendar"] button,
-    html[data-theme="dark"] [data-baseweb="calendar"] select {{
-        background: {_surface2} !important;
-        color: {_text} !important;
-        border-radius: 8px !important;
-        border: 1px solid {_border} !important;
-    }}
-    html[data-theme="dark"] [data-baseweb="calendar"] .calendar-day-selected,
-    html[data-theme="dark"] [data-baseweb="calendar"] .calendar-day-selected:focus {{
-        background: {_accent} !important;
-        color: #fff !important;
-    }}
     /* Universal baseweb input fix for all fields in dark mode */
     [data-baseweb="input"],
     [data-baseweb="base-input"],
