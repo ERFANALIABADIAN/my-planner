@@ -236,9 +236,19 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     st.session_state[ctr_key] = 0
                 ctr = st.session_state[ctr_key]
                 rotating_key = f"new_sub_{task_id}_{ctr}"
+                # Callback to allow adding a subtask by pressing Enter in the text input
+                def _on_new_sub_enter(rk=rotating_key, t_id=task_id, ck=ctr_key):
+                    val = st.session_state.get(rk, "").strip()
+                    if val:
+                        db.create_subtask(t_id, val)
+                        # Advance counter so a fresh, cleared widget instance is created
+                        st.session_state[ck] = st.session_state.get(ck, 0) + 1
+                        st.rerun()
+
                 new_sub_title = st.text_input(
                     "New subtask", placeholder="Add a subtask...",
-                    key=rotating_key, label_visibility="collapsed"
+                    key=rotating_key, label_visibility="collapsed",
+                    on_change=_on_new_sub_enter
                 )
             with col_add_sub:
                 if st.button("➕", key=f"add_sub_{task_id}"):
