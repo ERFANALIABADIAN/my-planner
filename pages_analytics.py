@@ -56,29 +56,6 @@ def render_analytics_page():
 
 @st.fragment
 def _render_daily_tab(user_id):
-    # Improve date picker styling in dark theme (flatpickr popup)
-    if st.session_state.get('theme', 'light') == 'dark':
-        st.markdown("""
-        <style>
-        .flatpickr-calendar {
-            background: #0F1117 !important;
-            color: #E5E7EB !important;
-            border: 1px solid #2D3150 !important;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.6) !important;
-        }
-        .flatpickr-months, .flatpickr-month {
-            background: #151722 !important;
-        }
-        .flatpickr-current-month { color: #E5E7EB !important; }
-        .flatpickr-weekdays { background: transparent !important; }
-        .flatpickr-weekday { color: #9CA3AF !important; }
-        .flatpickr-day { color: #C7CBD6 !important; background: transparent !important; }
-        .flatpickr-day.today { background: rgba(79,142,247,0.15) !important; color: #60A5FA !important; border-radius: 50% !important; }
-        .flatpickr-day.selected, .flatpickr-day.selected:hover { background: #60A5FA !important; color: #FFFFFF !important; border-radius: 50% !important; }
-        .flatpickr-monthDropdown-months, .flatpickr-yearDropdown { background: #1E2130 !important; color: #E5E7EB !important; border: 1px solid #2D3150 !important; }
-        </style>
-        """, unsafe_allow_html=True)
-
     target_date = st.date_input("Select Date", value=date.today(), key="daily_date")
     daily = db.get_daily_summary(user_id, target_date.isoformat())
     
