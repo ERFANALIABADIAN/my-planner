@@ -10,6 +10,26 @@ from datetime import date, timedelta
 import database as db
 
 
+def _inject_datepicker_css():
+    """Inject CSS to style Streamlit date pickers for dark theme contrast."""
+    st.markdown(
+        """
+        <style>
+        /* Date input containers and text */
+        .stDateInput, .stDateInput * { background-color: #0b1220 !important; color: #E5E7EB !important; }
+        .stDateInput input, input[type="date"], input[type="text"] { background-color: #0b1220 !important; color: #E5E7EB !important; border: 1px solid #26323b !important; }
+        /* Calendar popup (common library classes) */
+        .react-datepicker, .react-datepicker * { background: #0b1220 !important; color: #E5E7EB !important; }
+        .react-datepicker__day, .react-datepicker__day-name { color: #E5E7EB !important; }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background: #1f6feb !important; color: #FFFFFF !important; }
+        /* Ensure dropdowns / panels blend in */
+        [role="dialog"] { background: transparent !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def format_minutes(minutes: float) -> str:
     """Format minutes to a human-readable string with hours, minutes, and seconds."""
     total_seconds = int(minutes * 60)
@@ -56,6 +76,7 @@ def render_analytics_page():
 
 @st.fragment
 def _render_daily_tab(user_id):
+    _inject_datepicker_css()
     target_date = st.date_input("Select Date", value=date.today(), key="daily_date")
     daily = db.get_daily_summary(user_id, target_date.isoformat())
     

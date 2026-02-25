@@ -5,6 +5,23 @@ Tasks page - Category & Task management with subtasks.
 import streamlit as st
 from datetime import date
 import database as db
+ 
+
+def _inject_datepicker_css():
+    """Inject CSS to style Streamlit date pickers for dark theme contrast."""
+    st.markdown(
+        """
+        <style>
+        .stDateInput, .stDateInput * { background-color: #0b1220 !important; color: #E5E7EB !important; }
+        .stDateInput input, input[type="date"], input[type="text"] { background-color: #0b1220 !important; color: #E5E7EB !important; border: 1px solid #26323b !important; }
+        .react-datepicker, .react-datepicker * { background: #0b1220 !important; color: #E5E7EB !important; }
+        .react-datepicker__day, .react-datepicker__day-name { color: #E5E7EB !important; }
+        .react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background: #1f6feb !important; color: #FFFFFF !important; }
+        [role="dialog"] { background: transparent !important; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 import time
 
 # Helper to request confirmation before deleting items
@@ -282,6 +299,7 @@ def _render_log_time_section(user_id, task_id, task_title):
                 )
                 st.session_state[f'_log_min_local_{task_id}'] = log_mins
             with col_date:
+                _inject_datepicker_css()
                 log_date = st.date_input(
                     "Date", value=st.session_state[f'_log_date_local_{task_id}'],
                     key=f"log_date_input_{task_id}", label_visibility="collapsed"
