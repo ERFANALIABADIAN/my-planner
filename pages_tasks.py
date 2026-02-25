@@ -47,8 +47,8 @@ def _new_sub_on_enter(task_id: int, rotating_key: str, ctr_key: str):
     if title and title.strip():
         db.create_subtask(task_id, title.strip())
         st.session_state[ctr_key] = st.session_state.get(ctr_key, 0) + 1
-    # Ensure UI updates immediately
-    st.rerun()
+    # Streamlit automatically reruns after an on_change callback,
+    # so calling `st.rerun()` here is unnecessary and produces a warning.
 
 
 
