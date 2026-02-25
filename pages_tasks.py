@@ -216,12 +216,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                             unsafe_allow_html=True
                         )
                 with col_sub_del:
-                    # Edit button (inline) next to delete
-                    if st.button("✏️", key=f"edit_sub_{sub['id']}", help="Edit", type="tertiary"):
-                        st.session_state[f"editing_sub_{sub['id']}"] = True
-                        st.rerun()
-                    if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
-                        request_delete('subtask', sub['id'], sub.get('title') or '')
+                    # Place edit and delete buttons inline using nested columns
+                    btn_col_edit, btn_col_del = st.columns([1, 1], gap="small")
+                    with btn_col_edit:
+                        if st.button("✏️", key=f"edit_sub_{sub['id']}", help="Edit", type="tertiary"):
+                            st.session_state[f"editing_sub_{sub['id']}"] = True
+                            st.rerun()
+                    with btn_col_del:
+                        if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
+                            request_delete('subtask', sub['id'], sub.get('title') or '')
 
             # Completed subtasks: hidden by default, toggle to reveal
             comp_key = f'completed_sub_open_{task_id}'
@@ -248,12 +251,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 unsafe_allow_html=True
                             )
                         with col_actions:
-                            # Edit and delete for completed subtasks
-                            if st.button("✏️", key=f"edit_done_sub_{sub['id']}", help="Edit", type="tertiary"):
-                                st.session_state[f"editing_sub_{sub['id']}"] = True
-                                st.rerun()
-                            if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
-                                request_delete('subtask', sub['id'], sub.get('title') or '')
+                            # Place edit and delete inline for completed subtasks
+                            act_col_edit, act_col_del = st.columns([1, 1], gap="small")
+                            with act_col_edit:
+                                if st.button("✏️", key=f"edit_done_sub_{sub['id']}", help="Edit", type="tertiary"):
+                                    st.session_state[f"editing_sub_{sub['id']}"] = True
+                                    st.rerun()
+                            with act_col_del:
+                                if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
+                                    request_delete('subtask', sub['id'], sub.get('title') or '')
 
             col_new_sub, col_add_sub = st.columns([5, 1])
             with col_new_sub:
