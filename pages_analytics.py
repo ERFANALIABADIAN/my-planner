@@ -214,6 +214,33 @@ def _render_monthly_tab(user_id):
         sel_month = st.number_input("Month", min_value=1, max_value=12,
                                      value=today.month, key="m_month")
 
+    # Apply dark mode styling to calendar
+    st.markdown(
+        """
+        <style>
+        .stDateInput input {
+            background-color: #1E1E1E;
+            color: #FFFFFF;
+            border: 1px solid #444;
+            border-radius: 5px;
+        }
+        .stDateInput div {
+            color: #FFFFFF;
+        }
+        .stDateInput button {
+            background-color: #444;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 5px;
+        }
+        .stDateInput button:hover {
+            background-color: #555;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
     monthly = db.get_monthly_summary(user_id, int(sel_year), int(sel_month))
 
     if monthly:
