@@ -292,53 +292,6 @@ st.markdown(f"""
         background-color: {_input} !important;
         border-color: {_border} !important;
     }}
-    /* Datepicker popover (calendar) - ensure calendar adapts to theme */
-    div[data-baseweb="popover"] .DayPicker,
-    div[data-baseweb="popover"] .react-datepicker,
-    div[data-baseweb="popover"] .rdp,
-    div[role="dialog"] .DayPicker,
-    div[role="dialog"] .react-datepicker,
-    div[role="dialog"] .rdp {{
-        background-color: {_surface} !important;
-        color: {_text} !important;
-        border: 1px solid {_border} !important;
-    }}
-    div[data-baseweb="popover"] .DayPicker-Day,
-    div[data-baseweb="popover"] .react-datepicker__day,
-    div[data-baseweb="popover"] button[role="gridcell"],
-    div[role="dialog"] .DayPicker-Day,
-    div[role="dialog"] .react-datepicker__day,
-    div[role="dialog"] button[role="gridcell"] {{
-        background: transparent !important;
-        color: {_text} !important;
-        border-radius: 6px !important;
-    }}
-    div[data-baseweb="popover"] .DayPicker-Day--selected,
-    div[data-baseweb="popover"] .react-datepicker__day--selected,
-    div[role="dialog"] .DayPicker-Day--selected,
-    div[role="dialog"] .react-datepicker__day--selected {{
-        background-color: {_accent} !important;
-        color: {_head} !important;
-    }}
-    div[data-baseweb="popover"] .DayPicker-Day--today,
-    div[data-baseweb="popover"] .react-datepicker__day--today,
-    div[role="dialog"] .DayPicker-Day--today,
-    div[role="dialog"] .react-datepicker__day--today {{
-        box-shadow: 0 0 0 2px {_accent}33 !important;
-    }}
-    div[data-baseweb="popover"] .DayPicker-NavButton,
-    div[data-baseweb="popover"] .react-datepicker__navigation,
-    div[role="dialog"] .DayPicker-NavButton,
-    div[role="dialog"] .react-datepicker__navigation {{
-        color: {_text} !important; fill: {_text} !important;
-    }}
-    div[data-baseweb="popover"] table,
-    div[data-baseweb="popover"] thead,
-    div[data-baseweb="popover"] tbody,
-    div[data-baseweb="popover"] td,
-    div[data-baseweb="popover"] th {{
-        color: {_text} !important; background: {_surface} !important; border-color: {_border} !important;
-    }}
     /* Universal baseweb input fix for all fields in dark mode */
     [data-baseweb="input"],
     [data-baseweb="base-input"],
