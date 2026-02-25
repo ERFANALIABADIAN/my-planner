@@ -194,11 +194,32 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         args=(sub['id'], task_id)
                     )
                 with col_name:
-                    st.markdown(
-                        f"<div style='display:flex; align-items:center; min-height:1.8rem; color:{text_col};'>{sub['title']}</div>",
-                        unsafe_allow_html=True
-                    )
+                    edit_key = f"editing_sub_{sub['id']}"
+                    # If editing, show inline form, otherwise show title
+                    if st.session_state.get(edit_key, False):
+                        with st.form(f"edit_sub_form_{sub['id']}"):
+                            new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
+                            col_save, col_cancel = st.columns([1, 1])
+                            with col_save:
+                                if st.form_submit_button("Save", type="primary"):
+                                    if new_title.strip():
+                                        db.update_subtask(sub['id'], new_title.strip())
+                                    st.session_state.pop(edit_key, None)
+                                    st.rerun()
+                            with col_cancel:
+                                if st.form_submit_button("Cancel"):
+                                    st.session_state.pop(edit_key, None)
+                                    st.rerun()
+                    else:
+                        st.markdown(
+                            f"<div style='display:flex; align-items:center; min-height:1.8rem; color:{text_col};'>{sub['title']}</div>",
+                            unsafe_allow_html=True
+                        )
                 with col_sub_del:
+                    # Edit button (inline) next to delete
+                    if st.button("✏️", key=f"edit_sub_{sub['id']}", help="Edit", type="tertiary"):
+                        st.session_state[f"editing_sub_{sub['id']}"] = True
+                        st.rerun()
                     if st.button("🗑️", key=f"del_sub_{sub['id']}", help="Delete", type="tertiary"):
                         request_delete('subtask', sub['id'], sub.get('title') or '')
 
@@ -227,7 +248,10 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 unsafe_allow_html=True
                             )
                         with col_actions:
-                            # Only show delete for completed subtasks
+                            # Edit and delete for completed subtasks
+                            if st.button("✏️", key=f"edit_done_sub_{sub['id']}", help="Edit", type="tertiary"):
+                                st.session_state[f"editing_sub_{sub['id']}"] = True
+                                st.rerun()
                             if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                 request_delete('subtask', sub['id'], sub.get('title') or '')
 
