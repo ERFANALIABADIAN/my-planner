@@ -10,6 +10,64 @@ from datetime import date, timedelta
 import database as db
 
 
+def _inject_datepicker_css():
+    """Inject per-page CSS to ensure the datepicker/calendar is readable in dark theme."""
+    dark = st.session_state.get('theme', 'light') == 'dark'
+    if dark:
+        surface = "#1E2130"
+        surface2 = "#252840"
+        text = "#E5E7EB"
+        head = "#FFFFFF"
+        accent = "#4F8EF7"
+        muted = "#9CA3AF"
+    else:
+        surface = "#FFFFFF"
+        surface2 = "#F9FAFB"
+        text = "#374151"
+        head = "#1E1E2E"
+        accent = "#4A90D9"
+        muted = "#6B7280"
+
+    css = f"""
+    <style>
+    /* Analytics page: datepicker/calendar fallback styles */
+    div[data-baseweb="popover"] .DayPicker,
+    div[data-baseweb="popover"] .react-calendar,
+    div[role="dialog"] .DayPicker,
+    div[role="dialog"] .react-calendar {{
+        background-color: {surface} !important;
+        color: {text} !important;
+    }}
+    div[data-baseweb="popover"] .DayPicker-Day,
+    div[data-baseweb="popover"] .react-calendar__tile {{
+        color: {text} !important;
+        background: transparent !important;
+        opacity: 1 !important;
+    }}
+    div[data-baseweb="popover"] .DayPicker-Day:hover,
+    div[data-baseweb="popover"] .react-calendar__tile:hover {{
+        background-color: {surface2} !important;
+        color: {head} !important;
+    }}
+    div[data-baseweb="popover"] .DayPicker-Day--selected,
+    div[data-baseweb="popover"] .react-calendar__tile--active {{
+        background-color: {accent} !important;
+        color: #ffffff !important;
+    }}
+    div[data-baseweb="popover"] .DayPicker-Day--disabled,
+    div[data-baseweb="popover"] .react-calendar__tile--disabled {{
+        color: {muted} !important; opacity: 0.9 !important;
+    }}
+    /* Ensure month/year header is visible */
+    div[data-baseweb="popover"] .DayPicker-Caption,
+    div[data-baseweb="popover"] .react-calendar__navigation {{
+        color: {text} !important; background: transparent !important;
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+
 def format_minutes(minutes: float) -> str:
     """Format minutes to a human-readable string with hours, minutes, and seconds."""
     total_seconds = int(minutes * 60)
@@ -29,6 +87,9 @@ def render_analytics_page():
     # Ensure Tasks page will reset its panels when user navigates back
     st.session_state['_tasks_initialized'] = False
     user_id = st.session_state['user_id']
+
+    # Per-page fallback CSS for datepicker/calendar
+    _inject_datepicker_css()
 
     st.markdown("## 📊 Analytics & Reports") 
 

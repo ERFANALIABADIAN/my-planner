@@ -292,6 +292,57 @@ st.markdown(f"""
         background-color: {_input} !important;
         border-color: {_border} !important;
     }}
+    /* Calendar popup & day cells (multiple selector fallbacks) */
+    /* Targets DayPicker / react-calendar / baseweb popover variants used by Streamlit */
+    div[data-baseweb="popover"] .DayPicker,
+    div[data-baseweb="popover"] .DayPicker-Month,
+    div[data-baseweb="popover"] .DayPicker-Caption,
+    div[data-baseweb="popover"] .DayPicker-Weekdays,
+    div[data-baseweb="popover"] .DayPicker-Body,
+    div[data-baseweb="popover"] .DayPicker-Day,
+    div[data-baseweb="popover"] .DayPicker-Day button,
+    div[data-baseweb="popover"] .react-calendar,
+    div[data-baseweb="popover"] .react-calendar__month-view,
+    div[data-baseweb="popover"] .react-calendar__tile,
+    div[data-baseweb="popover"] .rdp-calendar,
+    div[data-baseweb="popover"] .rdp-day,
+    div[role="dialog"] .DayPicker,
+    div[role="dialog"] .react-calendar,
+    div[role="dialog"] .rdp-calendar {{
+        background-color: {_surface} !important;
+        color: {_text} !important;
+    }}
+    /* Day numbers */
+    div[data-baseweb="popover"] .DayPicker-Day button,
+    div[data-baseweb="popover"] .DayPicker-Day,
+    div[data-baseweb="popover"] .react-calendar__tile,
+    div[data-baseweb="popover"] .rdp-day {{
+        color: {_text} !important;
+        background: transparent !important;
+        border-radius: 6px !important;
+        opacity: 1 !important;
+    }}
+    /* Hover / active / selected states */
+    div[data-baseweb="popover"] .DayPicker-Day:hover button,
+    div[data-baseweb="popover"] .DayPicker-Day:hover,
+    div[data-baseweb="popover"] .react-calendar__tile:hover,
+    div[data-baseweb="popover"] .rdp-day:hover {{
+        background-color: {_surface2} !important;
+        color: {_head} !important;
+    }}
+    div[data-baseweb="popover"] .DayPicker-Day--selected button,
+    div[data-baseweb="popover"] .DayPicker-Day--selected,
+    div[data-baseweb="popover"] .react-calendar__tile--active,
+    div[data-baseweb="popover"] .rdp-day_selected {{
+        background-color: {_accent} !important;
+        color: #ffffff !important;
+    }}
+    /* Disabled/Outside days ensure readability */
+    div[data-baseweb="popover"] .DayPicker-Day--disabled,
+    div[data-baseweb="popover"] .react-calendar__tile--disabled,
+    div[data-baseweb="popover"] .rdp-day_disabled {{
+        color: {_muted} !important; opacity: 0.8 !important;
+    }}
     /* Universal baseweb input fix for all fields in dark mode */
     [data-baseweb="input"],
     [data-baseweb="base-input"],
