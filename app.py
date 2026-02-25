@@ -362,32 +362,6 @@ st.markdown(f"""
         border-color: {_border} !important;
     }}
 
-    /* Datepicker / calendar adjustments (BaseWeb / react-datepicker) */
-    div[role="dialog"] .react-datepicker,
-    div[role="dialog"] .react-datepicker__tab-loop,
-    div[role="dialog"] .DayPicker,
-    div[role="dialog"] .DayPicker-Month {{
-        background-color: {_surface} !important;
-        color: {_text} !important;
-    }}
-    div[role="dialog"] .react-datepicker__header,
-    div[role="dialog"] .DayPicker-Caption,
-    div[role="dialog"] .react-datepicker__current-month {{
-        background-color: {_surface2} !important;
-        color: {_text} !important;
-        border-bottom: 1px solid {_border} !important;
-    }}
-    div[role="dialog"] .react-datepicker__day-name,
-    div[role="dialog"] .react-datepicker__day {{
-        color: {_muted} !important;
-    }}
-    div[role="dialog"] .react-datepicker__day--selected,
-    div[role="dialog"] .DayPicker-Day--selected {{
-        background-color: {_accent} !important;
-        color: #ffffff !important;
-        border-radius: 999px !important;
-    }}
-
     /* 3. The icon buttons grid inside the popover */
     [data-baseweb="popover"] button {{
         background-color: {_surface2} !important;
