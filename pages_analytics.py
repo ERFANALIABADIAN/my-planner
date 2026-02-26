@@ -25,6 +25,15 @@ def format_minutes(minutes: float) -> str:
         return f"{secs}s"
 
 
+def format_hours(minutes: float, decimals: int = 1) -> str:
+    """Format minutes as hours-only string, e.g. '12.5h'."""
+    try:
+        hrs = float(minutes) / 60.0
+    except Exception:
+        hrs = 0.0
+    return f"{hrs:.{decimals}f}h"
+
+
 def render_analytics_page():
     # Ensure Tasks page will reset its panels when user navigates back
     st.session_state['_tasks_initialized'] = False
@@ -229,12 +238,12 @@ def _render_monthly_tab(user_id, analytics_token):
 
         col_mt1, col_mt2, col_mt3 = st.columns(3)
         with col_mt1:
-            st.metric("Total This Month", format_minutes(total_min))
+            st.metric("Total This Month", format_hours(total_min))
         with col_mt2:
             import calendar
             days_in_month = calendar.monthrange(int(sel_year), int(sel_month))[1]
             avg = total_min / days_in_month
-            st.metric("Daily Average", format_minutes(avg))
+            st.metric("Daily Average", format_hours(avg))
         with col_mt3:
             st.metric("Categories", len(monthly))
 
@@ -268,7 +277,7 @@ def _render_monthly_tab(user_id, analytics_token):
             with col_name:
                 st.markdown(f"{row['icon']} **{row['category_name']}**")
             with col_time:
-                st.markdown(f"**{format_minutes(row['total_minutes'])}**")
+                st.markdown(f"**{(row['total_minutes'] / 60):.1f}h**")
             with col_days:
                 st.markdown(f"{row['active_days']}d")
             with col_pct:
