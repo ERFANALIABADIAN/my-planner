@@ -342,6 +342,13 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                 except Exception:
                     # Don't raise here; failing to persist isn't fatal for UI update
                     pass
+                # Force a rerun so the JS timer component is re-rendered with the
+                # updated `pomodoro_minutes` (this makes +/- clicks update in real time).
+                try:
+                    st.rerun()
+                except Exception:
+                    # If rerun can't be performed in this context, ignore silently.
+                    pass
 
             pomodoro_min = st.number_input(
                 "Custom (minutes)",
