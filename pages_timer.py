@@ -416,7 +416,7 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                         st.session_state['timer_elapsed'] = 0
                         db.delete_active_timer(user_id) # Clear DB
                         st.session_state['db_synced'] = False
-                        # st.rerun() # NO RERUN
+                        st.rerun() 
         else:
             # State 2: Running - Pause | Stop
             col_pause, col_stop = st.columns(2)
