@@ -93,13 +93,10 @@ def _render_daily_tab(user_id, analytics_token):
             color_discrete_sequence=df_daily['color'].tolist(),
             hole=0.4
         )
-        # Show hours in the hover tooltip (use customdata from computed hours)
         fig_pie.update_traces(
             textposition='inside',
             textinfo='label+percent',
-            textfont_size=12,
-            customdata=df_daily[['hours']].values,
-            hovertemplate='%{label}<br><b>%{customdata[0]:.2f} h</b><br>%{percent}<extra></extra>'
+            textfont_size=12
         )
         fig_pie.update_layout(
             showlegend=False,
@@ -253,13 +250,7 @@ def _render_monthly_tab(user_id, analytics_token):
             color_discrete_sequence=df_monthly['color'].tolist(),
             hole=0.5
         )
-        # Use customdata to show hours in hover tooltip instead of raw minutes
-        fig_donut.update_traces(
-            textposition='inside',
-            textinfo='label+percent',
-            customdata=df_monthly[['hours']].values,
-            hovertemplate='%{label}<br><b>%{customdata[0]:.2f} h</b><br>%{percent}<extra></extra>'
-        )
+        fig_donut.update_traces(textposition='inside', textinfo='label+percent')
         fig_donut.update_layout(
             showlegend=False,
             margin=dict(t=10, b=10, l=10, r=10),
