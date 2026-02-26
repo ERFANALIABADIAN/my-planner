@@ -149,8 +149,11 @@ def _render_weekly_tab(user_id, analytics_token):
     current_week_end = current_week_start + timedelta(days=6)
 
     with col_nav2:
+        # Respect theme when rendering the week range so text is readable
+        _dark = st.session_state.get('theme', 'light') == 'dark'
+        _range_color = '#9CA3AF' if _dark else '#374151'
         st.markdown(
-            f"<div style='text-align:center;'><strong>"
+            f"<div style='text-align:center; color:{_range_color};'><strong>"
             f"{current_week_start.strftime('%b %d')} — {current_week_end.strftime('%b %d, %Y')}"
             f"</strong></div>",
             unsafe_allow_html=True
