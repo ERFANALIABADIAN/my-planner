@@ -213,16 +213,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         if st.session_state.get(edit_key, False):
                             with st.form(f"edit_sub_form_{sub['id']}"):
                                 new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
-                                # Place Save/Cancel side-by-side without stretching to full column width
-                                col_save, col_cancel = st.columns([1, 1], gap="small")
+                                col_save, col_cancel = st.columns([1, 1])
                                 with col_save:
-                                    if st.form_submit_button("Save", type="primary", use_container_width=False):
+                                    if st.form_submit_button("Save", type="primary"):
                                         if new_title.strip():
                                             db.update_subtask(sub['id'], new_title.strip())
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
                                 with col_cancel:
-                                    if st.form_submit_button("Cancel", use_container_width=False):
+                                    if st.form_submit_button("Cancel"):
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
                         else:
@@ -509,16 +508,15 @@ def _render_task_item(task, user_id, categories, text_col, muted_col, card_bg, d
                     "Goal Hours (0 = no goal)",
                     min_value=0.0, max_value=10000.0, value=float(curr_goal_h), step=0.5
                 )
-                # Save/Cancel side-by-side without full-width buttons
-                col_save, col_cancel = st.columns([1, 1], gap="small")
+                col_save, col_cancel = st.columns(2)
                 with col_save:
-                    if st.form_submit_button("Save", type="primary", use_container_width=False):
+                    if st.form_submit_button("Save", type="primary", use_container_width=True):
                         db.update_task(task['id'], title=new_title, description=new_desc,
                                        category_id=new_cat, goal_minutes=new_goal_h * 60)
                         st.session_state.pop(f'editing_task_{task["id"]}', None)
                         st.rerun()
                 with col_cancel:
-                    if st.form_submit_button("Cancel", use_container_width=False):
+                    if st.form_submit_button("Cancel", use_container_width=True):
                         st.session_state.pop(f'editing_task_{task["id"]}', None)
                         st.rerun()
 
