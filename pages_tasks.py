@@ -37,6 +37,21 @@ def _subtask_toggle_cb(sub_id: int, task_id: int):
     st.session_state[f'subtask_timer_{task_id}'] = time.time()
 
 
+def _create_subtask_cb(task_id: int, text_widget_key: str, ctr_key: str):
+    """Callback to create a subtask from a text_input on_change (Enter key).
+    Advances the rotating ctr so the widget clears on next render and forces a rerun.
+    """
+    title = st.session_state.get(text_widget_key, "")
+    if title and title.strip():
+        try:
+            db.create_subtask(task_id, title.strip())
+        except Exception:
+            pass
+    # Advance counter so next render shows a fresh, empty widget
+    st.session_state[ctr_key] = st.session_state.get(ctr_key, 0) + 1
+    st.rerun()
+
+
 
 @st.fragment
 def _render_sidebar_new_category(user_id, text_col):
@@ -274,28 +289,27 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
-            # New subtask input: use a small form so pressing Enter submits
+            # New subtask input: keep the original single-color button and allow Enter
             # Use a rotating counter in the widget key so we can force a fresh widget instance
             ctr_key = f'new_sub_ctr_{task_id}'
             if ctr_key not in st.session_state:
                 st.session_state[ctr_key] = 0
             ctr = st.session_state[ctr_key]
-            form_key = f"new_sub_form_{task_id}_{ctr}"
+            rotating_key = f"new_sub_{task_id}_{ctr}"
 
-            # Place the text input and submit button inside the same form so Enter triggers submit
-            with st.form(form_key):
-                col_new_sub, col_add_sub = st.columns([5, 1])
-                with col_new_sub:
-                    new_sub_title = st.text_input(
-                        "New subtask", placeholder="Add a subtask...",
-                        key=f"new_sub_{task_id}_{ctr}", label_visibility="collapsed"
-                    )
-                with col_add_sub:
-                    submitted = st.form_submit_button("➕")
-
-                if submitted:
-                    if new_sub_title.strip():
-                        db.create_subtask(task_id, new_sub_title.strip())
+            # Text input triggers on_change (Enter) which calls our callback to create the subtask
+            col_new_sub, col_add_sub = st.columns([5, 1])
+            with col_new_sub:
+                new_sub_title = st.text_input(
+                    "New subtask", placeholder="Add a subtask...",
+                    key=rotating_key, label_visibility="collapsed",
+                    on_change=_create_subtask_cb, args=(task_id, rotating_key, ctr_key)
+                )
+            with col_add_sub:
+                if st.button("➕", key=f"add_sub_{task_id}"):
+                    title = st.session_state.get(rotating_key, "")
+                    if title and title.strip():
+                        db.create_subtask(task_id, title.strip())
                         # Advance counter so next render creates a new widget instance (cleared)
                         st.session_state[ctr_key] = ctr + 1
                         st.rerun()  # Fragment rerun
