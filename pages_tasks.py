@@ -211,17 +211,19 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     with inner_name:
                         edit_key = f"editing_sub_{sub['id']}"
                         if st.session_state.get(edit_key, False):
+                            # Layout: input + Save + Cancel in one horizontal row so they align with checkbox
                             with st.form(f"edit_sub_form_{sub['id']}"):
-                                new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
-                                col_save, col_cancel = st.columns([1, 1])
+                                col_input, col_save, col_cancel = st.columns([10, 1, 1], gap="small")
+                                with col_input:
+                                    new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
                                 with col_save:
-                                    if st.form_submit_button("Save", type="primary"):
+                                    if st.form_submit_button("Save", type="primary", use_container_width=True):
                                         if new_title.strip():
                                             db.update_subtask(sub['id'], new_title.strip())
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
                                 with col_cancel:
-                                    if st.form_submit_button("Cancel"):
+                                    if st.button("Cancel", use_container_width=True):
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
                         else:
