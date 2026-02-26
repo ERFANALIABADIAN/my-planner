@@ -301,26 +301,6 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         st.session_state[ctr_key] = ctr + 1
                         st.rerun()  # Fragment rerun
 
-                        # Force the submit button to use a single filled color (no white background)
-                        st.markdown(
-                                """
-                                <style>
-                                /* Style form submit buttons (used for subtask +) to a fixed filled color */
-                                button[data-testid="stFormSubmitButton"] {
-                                    background: #60A5FA !important;
-                                    color: #ffffff !important;
-                                    box-shadow: none !important;
-                                    border: none !important;
-                                    border-radius: 8px !important;
-                                }
-                                button[data-testid="stFormSubmitButton"]:hover {
-                                    background: #60A5FA !important;
-                                }
-                                </style>
-                                """,
-                                unsafe_allow_html=True,
-                        )
-
 
 def _render_log_time_section(user_id, task_id, task_title):
     """Log Time panel helper (called within task fragment)."""
