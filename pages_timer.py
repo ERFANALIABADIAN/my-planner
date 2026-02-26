@@ -197,8 +197,10 @@ def render_timer_page():
         # Scroll to top so the confirmation modal is visible without manual scrolling
         try:
             components.html(
-                "<script>setTimeout(function(){window.scrollTo({top:0,behavior:'smooth'});},120);</script>",
-                height=1
+                "<div id='confirm-anchor'></div>"
+                "<script>setTimeout(function(){var el=document.getElementById('confirm-anchor');"
+                "if(el){el.scrollIntoView({behavior:'smooth', block:'center'});} }, 200);</script>",
+                height=1,
             )
         except Exception:
             pass

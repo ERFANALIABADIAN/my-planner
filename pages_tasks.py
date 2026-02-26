@@ -626,10 +626,13 @@ def render_tasks_page():
         cd = st.session_state['confirm_delete']
         # Ensure the UI scrolls to top so the modal/confirmation is visible
         try:
-            # Run scroll after a short delay so modal DOM is present
+            # Insert an in-page anchor and scroll to it after a short delay so the
+            # inline confirmation or modal area is visible to the user.
             components.html(
-                "<script>setTimeout(function(){window.scrollTo({top:0,behavior:'smooth'});},120);</script>",
-                height=1
+                "<div id='confirm-anchor'></div>"
+                "<script>setTimeout(function(){var el=document.getElementById('confirm-anchor');"
+                "if(el){el.scrollIntoView({behavior:'smooth', block:'center'});} }, 200);</script>",
+                height=1,
             )
         except Exception:
             pass
