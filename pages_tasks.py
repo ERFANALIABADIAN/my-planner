@@ -274,20 +274,26 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
-            col_new_sub, col_add_sub = st.columns([5, 1])
-            with col_new_sub:
-                # Use a rotating counter in the widget key so we can force a fresh widget instance
-                ctr_key = f'new_sub_ctr_{task_id}'
-                if ctr_key not in st.session_state:
-                    st.session_state[ctr_key] = 0
-                ctr = st.session_state[ctr_key]
-                rotating_key = f"new_sub_{task_id}_{ctr}"
-                new_sub_title = st.text_input(
-                    "New subtask", placeholder="Add a subtask...",
-                    key=rotating_key, label_visibility="collapsed"
-                )
-            with col_add_sub:
-                if st.button("➕", key=f"add_sub_{task_id}"):
+            # New subtask input: use a small form so pressing Enter submits
+            # Use a rotating counter in the widget key so we can force a fresh widget instance
+            ctr_key = f'new_sub_ctr_{task_id}'
+            if ctr_key not in st.session_state:
+                st.session_state[ctr_key] = 0
+            ctr = st.session_state[ctr_key]
+            form_key = f"new_sub_form_{task_id}_{ctr}"
+
+            # Place the text input and submit button inside the same form so Enter triggers submit
+            with st.form(form_key):
+                col_new_sub, col_add_sub = st.columns([5, 1])
+                with col_new_sub:
+                    new_sub_title = st.text_input(
+                        "New subtask", placeholder="Add a subtask...",
+                        key=f"new_sub_{task_id}_{ctr}", label_visibility="collapsed"
+                    )
+                with col_add_sub:
+                    submitted = st.form_submit_button("➕")
+
+                if submitted:
                     if new_sub_title.strip():
                         db.create_subtask(task_id, new_sub_title.strip())
                         # Advance counter so next render creates a new widget instance (cleared)
