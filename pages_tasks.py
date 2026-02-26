@@ -626,7 +626,11 @@ def render_tasks_page():
         cd = st.session_state['confirm_delete']
         # Ensure the UI scrolls to top so the modal/confirmation is visible
         try:
-            components.html("<script>window.scrollTo({top:0,behavior:'smooth'});</script>", height=1)
+            # Run scroll after a short delay so modal DOM is present
+            components.html(
+                "<script>setTimeout(function(){window.scrollTo({top:0,behavior:'smooth'});},120);</script>",
+                height=1
+            )
         except Exception:
             pass
         modal_shown = False

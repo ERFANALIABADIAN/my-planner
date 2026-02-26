@@ -196,7 +196,10 @@ def render_timer_page():
         cd = st.session_state['confirm_delete']
         # Scroll to top so the confirmation modal is visible without manual scrolling
         try:
-            components.html("<script>window.scrollTo({top:0,behavior:'smooth'});</script>", height=1)
+            components.html(
+                "<script>setTimeout(function(){window.scrollTo({top:0,behavior:'smooth'});},120);</script>",
+                height=1
+            )
         except Exception:
             pass
         modal_shown = False
