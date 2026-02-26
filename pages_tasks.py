@@ -284,6 +284,15 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
 
             # Place the text input and submit button inside the same form so Enter triggers submit
             with st.form(form_key):
+                # Custom CSS to make the + button always use the hover color (no white default)
+                st.markdown('''<style>
+                button[kind="secondary"]:has(span:contains("➕")),
+                button:has(span:contains("➕")) {
+                    background-color: #4F46E5 !important; /* Use your hover color here */
+                    color: #fff !important;
+                    border: none !important;
+                }
+                </style>''', unsafe_allow_html=True)
                 col_new_sub, col_add_sub = st.columns([5, 1])
                 with col_new_sub:
                     new_sub_title = st.text_input(
@@ -296,7 +305,6 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                 if submitted:
                     if new_sub_title.strip():
                         db.create_subtask(task_id, new_sub_title.strip())
-                        # Advance counter so next render creates a new widget instance (cleared)
                         st.session_state[ctr_key] = ctr + 1
                         st.rerun()  # Fragment rerun
 
