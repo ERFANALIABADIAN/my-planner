@@ -49,7 +49,6 @@ def _create_subtask_cb(task_id: int, text_widget_key: str, ctr_key: str):
             pass
     # Advance counter so next render shows a fresh, empty widget
     st.session_state[ctr_key] = st.session_state.get(ctr_key, 0) + 1
-    st.rerun()
 
 
 
