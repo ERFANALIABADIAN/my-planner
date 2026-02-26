@@ -313,6 +313,13 @@ st.markdown(f"""
         color: {_muted} !important;
     }}
     
+    /* Ensure date input labels use the muted color and override earlier rules */
+    div[data-testid="stDateInput"] label,
+    div[data-testid="stDateInput"] label p,
+    div[data-testid="stDateInput"] label span {{
+        color: {_muted} !important;
+    }}
+
     /* ── Icon Picker Popover Button ───────────────────────────────────── */
     /* Target both global and sidebar contexts, all override levels */
     [data-testid="stPopover"] button,
