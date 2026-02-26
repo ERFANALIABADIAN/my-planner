@@ -3,6 +3,7 @@ Tasks page - Category & Task management with subtasks.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import date
 import database as db
 import time
@@ -623,6 +624,11 @@ def render_tasks_page():
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
         cd = st.session_state['confirm_delete']
+        # Ensure the UI scrolls to top so the modal/confirmation is visible
+        try:
+            components.html("<script>window.scrollTo({top:0,behavior:'smooth'});</script>", height=1)
+        except Exception:
+            pass
         modal_shown = False
         if hasattr(st, 'modal'):
             try:
