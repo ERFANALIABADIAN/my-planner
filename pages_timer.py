@@ -319,12 +319,21 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                              type="primary" if st.session_state.get('pomodoro_minutes') == 60 else "secondary"):
                     st.session_state['pomodoro_minutes'] = 60
 
-            # When the user changes the custom minutes we want the change to
-            # reflect immediately in the UI (and in the active DB record if any).
-            # Bind the widget directly to `st.session_state['pomodoro_minutes']`
-            # and use `on_change` to persist the change for a running timer.
-            def _on_pomodoro_minutes_changed():
-                new_min = st.session_state.get('pomodoro_minutes', 25)
+            # Use a separate key for the number input to avoid session/theme issues
+            if 'custom_pomodoro_minutes' not in st.session_state:
+                st.session_state['custom_pomodoro_minutes'] = st.session_state.get('pomodoro_minutes', 25)
+
+            custom_min = st.number_input(
+                "Custom (minutes)",
+                min_value=1, max_value=240,
+                value=st.session_state['custom_pomodoro_minutes'],
+                key='custom_pomodoro_minutes',
+                step=1
+            )
+
+            # Only update pomodoro_minutes if the value changed
+            if custom_min != st.session_state.get('pomodoro_minutes', 25):
+                st.session_state['pomodoro_minutes'] = custom_min
                 # If there's an active timer saved in DB, update its pomodoro_minutes
                 try:
                     if st.session_state.get('timer_task_id') is not None or st.session_state.get('db_synced'):
@@ -336,19 +345,11 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                             st.session_state.get('timer_paused_elapsed', 0),
                             bool(st.session_state.get('timer_running', False)),
                             'pomodoro',
-                            new_min,
+                            custom_min,
                             st.session_state.get('timer_subtask_id', selected_subtask_id)
                         )
                 except Exception:
-                    # Don't raise here; failing to persist isn't fatal for UI update
                     pass
-
-            pomodoro_min = st.number_input(
-                "Custom (minutes)",
-                min_value=1, max_value=240,
-                key='pomodoro_minutes',
-                on_change=_on_pomodoro_minutes_changed
-            )
 
     with col_timer:
         # Calculate elapsed time
