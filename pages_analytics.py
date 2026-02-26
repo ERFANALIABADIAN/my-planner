@@ -245,12 +245,20 @@ def _render_monthly_tab(user_id, analytics_token):
             lambda r: f"{r['icon']} {r['category_name']}", axis=1
         )
 
+        # Use hours for the donut plot (only for the plot display) so values
+        # and hover show hours rather than minutes.
         fig_donut = px.pie(
-            df_monthly, values='total_minutes', names='label',
+            df_monthly, values='hours', names='label',
             color_discrete_sequence=df_monthly['color'].tolist(),
             hole=0.5
         )
-        fig_donut.update_traces(textposition='inside', textinfo='label+percent')
+        # Show label + value (hours) inside slices and format hover to show hours
+        fig_donut.update_traces(
+            textposition='inside',
+            textinfo='label+value',
+            texttemplate='%{label}<br>%{value:.1f}h',
+            hovertemplate='%{label}<br>%{value:.1f} h<br>%{percent}'
+        )
         fig_donut.update_layout(
             showlegend=False,
             margin=dict(t=10, b=10, l=10, r=10),
