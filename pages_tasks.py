@@ -223,7 +223,7 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
                                 with col_cancel:
-                                    if st.button("Cancel", use_container_width=True):
+                                    if st.form_submit_button("Cancel", use_container_width=True):
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
                         else:
