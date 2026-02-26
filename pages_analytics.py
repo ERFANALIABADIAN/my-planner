@@ -68,7 +68,7 @@ def _render_daily_tab(user_id, analytics_token):
     _dark = st.session_state.get('theme', 'light') == 'dark'
     _label_color = '#9CA3AF' if _dark else '#374151'
     st.markdown(
-        f"<div style='margin-bottom:6px; color:{_label_color} !important; font-size:0.95rem;'>Select Date</div>",
+        f"<div style='margin-bottom:6px; color:{_label_color}; font-size:0.95rem;'>Select Date</div>",
         unsafe_allow_html=True
     )
     target_date = st.date_input("", value=date.today(), key="daily_date", label_visibility='collapsed')
@@ -160,7 +160,7 @@ def _render_weekly_tab(user_id, analytics_token):
         _dark = st.session_state.get('theme', 'light') == 'dark'
         _range_color = '#9CA3AF' if _dark else '#374151'
         st.markdown(
-            f"<div style='text-align:center; color:{_range_color} !important;'><strong>"
+            f"<div style='text-align:center; color:{_range_color};'><strong>"
             f"{current_week_start.strftime('%b %d')} — {current_week_end.strftime('%b %d, %Y')}"
             f"</strong></div>",
             unsafe_allow_html=True
