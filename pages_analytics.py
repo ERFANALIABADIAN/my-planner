@@ -30,6 +30,14 @@ def render_analytics_page():
     st.session_state['_tasks_initialized'] = False
     user_id = st.session_state['user_id']
 
+    # Track page visits: when the user arrives at Analytics (from another page),
+    # bump a token so Plotly chart DOM elements are recreated. This clears any
+    # client-side pan/zoom/relayout state and returns charts to their default view.
+    if st.session_state.get('_last_page') != 'analytics':
+        st.session_state['_analytics_chart_token'] = st.session_state.get('_analytics_chart_token', 0) + 1
+    st.session_state['_last_page'] = 'analytics'
+    _analytics_token = st.session_state.get('_analytics_chart_token', 0)
+
     st.markdown("## 📊 Analytics & Reports") 
 
     # ─── Period Selection ─────────────────────────────────────
@@ -97,7 +105,7 @@ def _render_daily_tab(user_id):
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig_pie, use_container_width=True)
+        st.plotly_chart(fig_pie, use_container_width=True, key=f"daily_pie_{_analytics_token}")
 
         # Detailed table
         for row in daily:
@@ -184,7 +192,7 @@ def _render_weekly_tab(user_id):
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, use_container_width=True, key=f"weekly_bar_{_analytics_token}")
 
         # Details
         for row in weekly:
@@ -250,7 +258,7 @@ def _render_monthly_tab(user_id):
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig_donut, use_container_width=True)
+        st.plotly_chart(fig_donut, use_container_width=True, key=f"monthly_donut_{_analytics_token}")
 
         # Monthly breakdown table
         st.markdown("#### Breakdown")
@@ -294,7 +302,7 @@ def _render_trend_tab(user_id):
             plot_bgcolor='rgba(0,0,0,0)',
             legend=dict(orientation="h", yanchor="bottom", y=-0.3)
         )
-        st.plotly_chart(fig_trend, use_container_width=True)
+        st.plotly_chart(fig_trend, use_container_width=True, key=f"trend_area_{_analytics_token}_{days_range}")
 
         # Total summary
         total_hours = df_trend['hours'].sum()
