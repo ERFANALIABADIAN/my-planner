@@ -228,16 +228,13 @@ def _render_monthly_tab(user_id, analytics_token):
         total_min = sum(row['total_minutes'] for row in monthly)
 
         col_mt1, col_mt2, col_mt3 = st.columns(3)
-        # Display totals as decimal hours (e.g. 3.2h) for concise overview
-        total_hours = total_min / 60.0
         with col_mt1:
-            st.metric("Total This Month", f"{total_hours:.1f}h")
+            st.metric("Total This Month", format_minutes(total_min))
         with col_mt2:
             import calendar
             days_in_month = calendar.monthrange(int(sel_year), int(sel_month))[1]
             avg = total_min / days_in_month
-            avg_hours = avg / 60.0
-            st.metric("Daily Average", f"{avg_hours:.1f}h")
+            st.metric("Daily Average", format_minutes(avg))
         with col_mt3:
             st.metric("Categories", len(monthly))
 
