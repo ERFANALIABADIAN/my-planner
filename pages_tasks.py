@@ -38,17 +38,14 @@ def _subtask_toggle_cb(sub_id: int, task_id: int):
 
 
 def _create_subtask_cb(task_id: int, text_widget_key: str, ctr_key: str):
-    """Callback to create a subtask from a text_input on_change (Enter key).
-    Advances the rotating ctr so the widget clears on next render and forces a rerun.
+    """Minimal callback run by `st.text_input(on_change=...)`.
+    Instead of performing DB operations inside the callback (which can cause rerun/no-op issues),
+    store the pending title in session state. The outer render will perform the DB insert and rerun.
     """
+    pending_key = f"_pending_new_sub_{task_id}"
     title = st.session_state.get(text_widget_key, "")
-    if title and title.strip():
-        try:
-            db.create_subtask(task_id, title.strip())
-        except Exception:
-            pass
-    # Advance counter so next render shows a fresh, empty widget
-    st.session_state[ctr_key] = st.session_state.get(ctr_key, 0) + 1
+    # Store the pending title (empty string means nothing to do)
+    st.session_state[pending_key] = title
 
 
 
@@ -312,6 +309,19 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         # Advance counter so next render creates a new widget instance (cleared)
                         st.session_state[ctr_key] = ctr + 1
                         st.rerun()  # Fragment rerun
+
+            # If an Enter event occurred the callback set a pending flag; handle it here
+            pending_key = f"_pending_new_sub_{task_id}"
+            pending_val = st.session_state.get(pending_key)
+            if pending_val and isinstance(pending_val, str) and pending_val.strip():
+                # Create subtask and advance rotating counter so input clears
+                try:
+                    db.create_subtask(task_id, pending_val.strip())
+                except Exception:
+                    pass
+                st.session_state.pop(pending_key, None)
+                st.session_state[ctr_key] = ctr + 1
+                st.rerun()
 
 
 def _render_log_time_section(user_id, task_id, task_title):
