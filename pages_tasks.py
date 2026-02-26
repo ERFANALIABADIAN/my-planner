@@ -211,16 +211,20 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                     with inner_name:
                         edit_key = f"editing_sub_{sub['id']}"
                         if st.session_state.get(edit_key, False):
+                            # Use a two-column layout inside the form so the input aligns
+                            # horizontally with the checkbox and actions appear on the right.
                             with st.form(f"edit_sub_form_{sub['id']}"):
-                                new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
-                                col_save, col_cancel = st.columns([1, 1])
-                                with col_save:
+                                input_col, actions_col = st.columns([8, 2], gap="small")
+                                with input_col:
+                                    new_title = st.text_input("", value=sub['title'], key=f"edit_sub_input_{sub['id']}")
+                                with actions_col:
+                                    # Place Save and Cancel as two small buttons stacked vertically
                                     if st.form_submit_button("Save", type="primary"):
                                         if new_title.strip():
                                             db.update_subtask(sub['id'], new_title.strip())
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
-                                with col_cancel:
+                                    # Use a regular button-like submit for Cancel
                                     if st.form_submit_button("Cancel"):
                                         st.session_state.pop(edit_key, None)
                                         st.rerun()
