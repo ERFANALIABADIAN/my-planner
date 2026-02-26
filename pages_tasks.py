@@ -291,7 +291,8 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                         key=f"new_sub_{task_id}_{ctr}", label_visibility="collapsed"
                     )
                 with col_add_sub:
-                    submitted = st.form_submit_button("➕")
+                    # Use a filled primary button so the plus has a solid background (no white)
+                    submitted = st.form_submit_button("➕", type="primary")
 
                 if submitted:
                     if new_sub_title.strip():
