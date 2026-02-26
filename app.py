@@ -117,6 +117,8 @@ st.markdown(f"""
         color: {_text} !important;
         opacity: 1 !important;
     }}
+    /* Specific: muted label color for Analytics daily date input to match header style */
+    label[for="daily_date"] {{ color: {_muted} !important; }}
     /* Fix the radio button circle border so it's visible */
     [data-testid="stRadio"] input[type="radio"] + div,
     [data-testid="stRadio"] input[type="radio"] ~ div {{

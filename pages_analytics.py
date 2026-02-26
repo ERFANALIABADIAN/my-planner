@@ -64,14 +64,8 @@ def render_analytics_page():
 
 @st.fragment
 def _render_daily_tab(user_id, analytics_token):
-    # Render a theme-aware label and hide the built-in input label so we can control color
-    _dark = st.session_state.get('theme', 'light') == 'dark'
-    _label_color = '#9CA3AF' if _dark else '#374151'
-    st.markdown(
-        f"<div style='margin-bottom:6px; color:{_label_color} !important; font-size:0.95rem;'>Select Date</div>",
-        unsafe_allow_html=True
-    )
-    target_date = st.date_input("", value=date.today(), key="daily_date", label_visibility='collapsed')
+    # Use the normal labeled date_input so the calendar popup anchors correctly
+    target_date = st.date_input("Select Date", value=date.today(), key="daily_date")
     daily = db.get_daily_summary(user_id, target_date.isoformat())
     
     if daily:
