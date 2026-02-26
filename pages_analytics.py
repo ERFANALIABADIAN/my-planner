@@ -47,23 +47,23 @@ def render_analytics_page():
 
     # ─── DAILY TAB (Fragment) ─────────────────────────────────
     with tab_daily:
-        _render_daily_tab(user_id)
+        _render_daily_tab(user_id, _analytics_token)
 
     # ─── WEEKLY TAB (Fragment) ────────────────────────────────
     with tab_weekly:
-        _render_weekly_tab(user_id)
+        _render_weekly_tab(user_id, _analytics_token)
 
     # ─── MONTHLY TAB (Fragment) ───────────────────────────────
     with tab_monthly:
-        _render_monthly_tab(user_id)
+        _render_monthly_tab(user_id, _analytics_token)
 
     # ─── TREND TAB (Fragment) ─────────────────────────────────
     with tab_trend:
-        _render_trend_tab(user_id)
+        _render_trend_tab(user_id, _analytics_token)
 
 
 @st.fragment
-def _render_daily_tab(user_id):
+def _render_daily_tab(user_id, analytics_token):
     target_date = st.date_input("Select Date", value=date.today(), key="daily_date")
     daily = db.get_daily_summary(user_id, target_date.isoformat())
     
@@ -105,7 +105,7 @@ def _render_daily_tab(user_id):
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig_pie, use_container_width=True, key=f"daily_pie_{_analytics_token}")
+        st.plotly_chart(fig_pie, use_container_width=True, key=f"daily_pie_{analytics_token}")
 
         # Detailed table
         for row in daily:
@@ -127,7 +127,7 @@ def _render_daily_tab(user_id):
 
 
 @st.fragment
-def _render_weekly_tab(user_id):
+def _render_weekly_tab(user_id, analytics_token):
     today = date.today()
     week_start = today - timedelta(days=today.weekday())  # Monday
     
@@ -192,7 +192,7 @@ def _render_weekly_tab(user_id):
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig_bar, use_container_width=True, key=f"weekly_bar_{_analytics_token}")
+        st.plotly_chart(fig_bar, use_container_width=True, key=f"weekly_bar_{analytics_token}")
 
         # Details
         for row in weekly:
@@ -212,7 +212,7 @@ def _render_weekly_tab(user_id):
 
 
 @st.fragment
-def _render_monthly_tab(user_id):
+def _render_monthly_tab(user_id, analytics_token):
     today = date.today()
     col_year, col_month = st.columns(2)
     with col_year:
@@ -258,7 +258,7 @@ def _render_monthly_tab(user_id):
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)'
         )
-        st.plotly_chart(fig_donut, use_container_width=True, key=f"monthly_donut_{_analytics_token}")
+        st.plotly_chart(fig_donut, use_container_width=True, key=f"monthly_donut_{analytics_token}")
 
         # Monthly breakdown table
         st.markdown("#### Breakdown")
@@ -279,7 +279,7 @@ def _render_monthly_tab(user_id):
 
 
 @st.fragment
-def _render_trend_tab(user_id):
+def _render_trend_tab(user_id, analytics_token):
     days_range = st.slider("Show last N days", 7, 90, 30, key="trend_days")
     trend_data = db.get_daily_trend(user_id, days_range)
 
@@ -302,7 +302,7 @@ def _render_trend_tab(user_id):
             plot_bgcolor='rgba(0,0,0,0)',
             legend=dict(orientation="h", yanchor="bottom", y=-0.3)
         )
-        st.plotly_chart(fig_trend, use_container_width=True, key=f"trend_area_{_analytics_token}_{days_range}")
+        st.plotly_chart(fig_trend, use_container_width=True, key=f"trend_area_{analytics_token}_{days_range}")
 
         # Total summary
         total_hours = df_trend['hours'].sum()
