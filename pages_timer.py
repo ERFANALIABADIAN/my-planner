@@ -135,15 +135,11 @@ def render_timer_page():
 
     st.markdown("## ⏱ Focus Timer")
 
-    if not tasks:
-        st.info("You need active tasks to use the timer. Go to Tasks page to create some!")
-        return
-
-    # ─── Build task options BEFORE columns so we can use them for sync ───
-    task_options = {}
-    for t in tasks:
-        label = f"{t['category_icon']} {t['title']} ({t['category_name']})"
-        task_options[label] = t['id']
+    # ─── Build category options ───────────────────────────────────────────
+    _NONE_LABEL = "🚫 None (Free Timer)"
+    cat_options = {_NONE_LABEL: None}
+    for c in categories:
+        cat_options[f"{c['icon']} {c['name']}"] = c['id']
 
     # ─── Initialize session state ─────────────────────────────────────────
     if 'timer_running' not in st.session_state:
@@ -169,20 +165,31 @@ def render_timer_page():
         st.session_state['pomodoro_minutes']     = active_timer_db['pomodoro_minutes']
         st.session_state['db_synced'] = True
 
-    # ─── Sync selectbox key → active task (timer running or paused) ─────────
-    # This must happen BEFORE st.selectbox() renders so the widget shows correctly.
+    # ─── Sync selectbox keys → active timer (running or paused) ─────────
     active_task_id = st.session_state.get('timer_task_id')
-    if active_task_id and (st.session_state['timer_running']
-                           or st.session_state.get('timer_paused_elapsed', 0) > 0):
-        correct_label = next(
-            (lbl for lbl, tid in task_options.items() if tid == active_task_id), None
-        )
-        if correct_label:
-            st.session_state['timer_task_select'] = correct_label
+    timer_is_active = (st.session_state['timer_running']
+                       or st.session_state.get('timer_paused_elapsed', 0) > 0)
+
+    if timer_is_active:
+        if active_task_id:
+            # Find the category of this task and sync category selectbox
+            active_task = next((t for t in tasks if t['id'] == active_task_id), None)
+            if active_task:
+                correct_cat_label = next(
+                    (lbl for lbl, cid in cat_options.items() if cid == active_task['category_id']), None
+                )
+                if correct_cat_label:
+                    st.session_state['timer_cat_select'] = correct_cat_label
+                # Sync task selectbox
+                correct_task_label = f"{active_task['category_icon']} {active_task['title']}"
+                st.session_state['timer_task_select'] = correct_task_label
+        else:
+            # Free timer mode
+            st.session_state['timer_cat_select'] = _NONE_LABEL
 
     # ─── Sync subtask selectbox ───────────────────────────────────────────────
     active_subtask_id = st.session_state.get('timer_subtask_id')
-    if active_task_id and active_subtask_id:
+    if active_task_id and active_subtask_id and timer_is_active:
         _active_subs = db.get_subtasks(active_task_id)
         correct_sub_label = next(
             (s['title'] for s in _active_subs if s['id'] == active_subtask_id), None
@@ -262,11 +269,11 @@ def render_timer_page():
                         st.session_state.pop('confirm_delete', None)
                         st.rerun()
 
-    _render_timer_dashboard(user_id, tasks, task_options)
+    _render_timer_dashboard(user_id, categories, tasks, cat_options, _NONE_LABEL)
 
 
 @st.fragment
-def _render_timer_dashboard(user_id, tasks, task_options):
+def _render_timer_dashboard(user_id, categories, tasks, cat_options, _NONE_LABEL):
     """Fragment-based timer dashboard for snappy UI updates without full page refreshes."""
     
     # ─── Timer Configuration ──────────────────────────────────
@@ -275,29 +282,54 @@ def _render_timer_dashboard(user_id, tasks, task_options):
     with col_config:
         st.markdown("### 🎯 Select Task")
 
-        selected_task_label = st.selectbox(
-            "Task",
-            options=list(task_options.keys()),
-            label_visibility="collapsed",
-            key="timer_task_select"
+        # Step 1: Category selection
+        selected_cat_label = st.selectbox(
+            "Category",
+            options=list(cat_options.keys()),
+            key="timer_cat_select"
         )
-        selected_task_id = task_options[selected_task_label]
+        selected_cat_id = cat_options[selected_cat_label]
 
-        # Optional subtask selection
-        subtasks = db.get_subtasks(selected_task_id)
+        selected_task_id = None
         selected_subtask_id = None
-        if subtasks:
-            undone_subtasks = [s for s in subtasks if not s['is_done']]
-            if undone_subtasks:
-                sub_options = {"None": None}
-                for s in undone_subtasks:
-                    sub_options[s['title']] = s['id']
-                selected_sub_label = st.selectbox(
-                    "Subtask (optional)",
-                    options=list(sub_options.keys()),
-                    key="timer_subtask_select"
+        can_start = False
+
+        if selected_cat_id is None:
+            # Free timer mode — no task needed
+            can_start = True
+        else:
+            # Step 2: Show tasks for this category
+            cat_tasks = [t for t in tasks if t['category_id'] == selected_cat_id]
+            if cat_tasks:
+                task_options = {}
+                for t in cat_tasks:
+                    task_options[f"{t['category_icon']} {t['title']}"] = t['id']
+
+                selected_task_label = st.selectbox(
+                    "Task",
+                    options=list(task_options.keys()),
+                    key="timer_task_select"
                 )
-                selected_subtask_id = sub_options[selected_sub_label]
+                selected_task_id = task_options[selected_task_label]
+                can_start = True
+
+                # Step 3: Optional subtask selection
+                subtasks = db.get_subtasks(selected_task_id)
+                if subtasks:
+                    undone_subtasks = [s for s in subtasks if not s['is_done']]
+                    if undone_subtasks:
+                        sub_options = {"None": None}
+                        for s in undone_subtasks:
+                            sub_options[s['title']] = s['id']
+                        selected_sub_label = st.selectbox(
+                            "Subtask (optional)",
+                            options=list(sub_options.keys()),
+                            key="timer_subtask_select"
+                        )
+                        selected_subtask_id = sub_options[selected_sub_label]
+            else:
+                st.warning("No active tasks in this category. Create a task first!")
+                can_start = False
 
         st.markdown("---")
         st.markdown("### ⏰ Timer Mode")
@@ -342,17 +374,17 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                 st.session_state['pomodoro_minutes'] = custom_min
                 # If there's an active timer saved in DB, update its pomodoro_minutes
                 try:
-                    if st.session_state.get('timer_task_id') is not None or st.session_state.get('db_synced'):
+                    if st.session_state.get('db_synced'):
                         start_iso = st.session_state['timer_start'].isoformat() if st.session_state.get('timer_start') else ""
                         db.save_active_timer(
                             user_id,
-                            st.session_state.get('timer_task_id', selected_task_id),
+                            st.session_state.get('timer_task_id') or selected_task_id,
                             start_iso,
                             st.session_state.get('timer_paused_elapsed', 0),
                             bool(st.session_state.get('timer_running', False)),
                             'pomodoro',
                             custom_min,
-                            st.session_state.get('timer_subtask_id', selected_subtask_id)
+                            st.session_state.get('timer_subtask_id') or selected_subtask_id
                         )
                 except Exception:
                     pass
@@ -371,10 +403,13 @@ def _render_timer_dashboard(user_id, tasks, task_options):
         st.markdown("<h3 style='text-align: center;'>🕐 Timer</h3>", unsafe_allow_html=True)
         
         # Show what task is running if loaded from DB separate from selection
-        if st.session_state.get('timer_running') and st.session_state.get('timer_task_id'):
-            # Find task name
-            active_t_name = next((t['title'] for t in tasks if t['id'] == st.session_state['timer_task_id']), "Unknown Task")
-            st.markdown(f"<div style='text-align:center; color:#9CA3AF; font-size:0.9rem;'>Running: <b>{active_t_name}</b></div>", unsafe_allow_html=True)
+        if st.session_state.get('timer_running'):
+            _running_task_id = st.session_state.get('timer_task_id')
+            if _running_task_id:
+                active_t_name = next((t['title'] for t in tasks if t['id'] == _running_task_id), "Unknown Task")
+                st.markdown(f"<div style='text-align:center; color:#9CA3AF; font-size:0.9rem;'>Running: <b>{active_t_name}</b></div>", unsafe_allow_html=True)
+            else:
+                st.markdown("<div style='text-align:center; color:#9CA3AF; font-size:0.9rem;'>Running: <b>Free Timer</b></div>", unsafe_allow_html=True)
 
         # Display timer using JavaScript component (smooth, no lag)
         mode_str = "pomodoro" if "🍅" in timer_mode else "stopwatch"
@@ -405,7 +440,7 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                 # State 1: Not started - Centered Start Button
                 _, col_center, _ = st.columns([1, 2, 1])
                 with col_center:
-                    if st.button("Start", use_container_width=True, type="primary"):
+                    if st.button("Start", use_container_width=True, type="primary", disabled=not can_start):
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = selected_task_id
@@ -428,7 +463,7 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                         
                         # Update DB
                         db.save_active_timer(
-                            user_id, st.session_state.get('timer_task_id', selected_task_id), 
+                            user_id, st.session_state.get('timer_task_id') or selected_task_id, 
                             st.session_state['timer_start'].isoformat(), 
                             st.session_state['timer_paused_elapsed'], 
                             True, mode_str, pom_mins, 
@@ -465,7 +500,7 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                     
                     # Update DB (save pause state)
                     db.save_active_timer(
-                        user_id, st.session_state.get('timer_task_id', selected_task_id), 
+                        user_id, st.session_state.get('timer_task_id') or selected_task_id, 
                         "", # No start time because paused
                         current_elapsed, 
                         False, mode_str, pom_mins, 
@@ -489,20 +524,21 @@ def _render_timer_dashboard(user_id, tasks, task_options):
             db.delete_active_timer(user_id)
             st.session_state['db_synced'] = False
             
-            # Save the time log with exact duration
+            # Save the time log with exact duration (only if a task was selected)
+            task_id = st.session_state.get('timer_task_id') or selected_task_id
+            subtask_id = st.session_state.get('timer_subtask_id') or selected_subtask_id
             minutes_spent = final_elapsed / 60
-            task_id = st.session_state.get('timer_task_id', selected_task_id)
-            subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
 
-            db.add_time_log(
-                user_id=user_id,
-                task_id=task_id,
-                duration_minutes=round(minutes_spent, 2),  # 2 decimal places = 1-second precision
-                log_date=date.today().isoformat(),
-                note=f"Timer session",
-                source="timer",
-                subtask_id=subtask_id
-            )
+            if task_id:
+                db.add_time_log(
+                    user_id=user_id,
+                    task_id=task_id,
+                    duration_minutes=round(minutes_spent, 2),  # 2 decimal places = 1-second precision
+                    log_date=date.today().isoformat(),
+                    note=f"Timer session",
+                    source="timer",
+                    subtask_id=subtask_id
+                )
 
             # Reset timer
             st.session_state['timer_running'] = False
@@ -515,7 +551,10 @@ def _render_timer_dashboard(user_id, tasks, task_options):
             ms = int((final_elapsed % 3600) // 60)
             ss = int(final_elapsed % 60)
             t_str = f"{hrs}h {ms}m {ss}s" if hrs > 0 else (f"{ms}m {ss}s" if ms > 0 else f"{ss}s")
-            st.toast(f"✅ Saved {t_str}!", icon="⏱️")
+            if task_id:
+                st.toast(f"✅ Saved {t_str}!", icon="⏱️")
+            else:
+                st.toast(f"⏱️ Free timer: {t_str} (not logged)", icon="⏱️")
 
             # FULL RERUN to update the Today's Sessions list below the fragment
             st.rerun()
