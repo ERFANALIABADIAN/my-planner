@@ -298,6 +298,16 @@ st.markdown(f"""
         background-color: {_surface} !important;
         color: {_text} !important;
     }}
+    /* Every nested div/span inside the calendar - nuke all white backgrounds */
+    [data-baseweb="calendar"] div,
+    [data-baseweb="calendar"] span,
+    [data-baseweb="calendar"] td,
+    [data-baseweb="calendar"] th,
+    [data-baseweb="calendar"] tr,
+    [data-baseweb="calendar"] table {{
+        background-color: transparent !important;
+        color: {_text} !important;
+    }}
     /* Month/Year header row */
     [data-baseweb="calendar"] [data-baseweb="calendar-header"],
     [data-baseweb="calendar"] > div:first-child {{
@@ -328,37 +338,59 @@ st.markdown(f"""
     [data-baseweb="calendar"] [role="columnheader"] {{
         color: {_muted} !important;
     }}
-    /* Day cells */
+    /* Day cells - all levels deep */
     [data-baseweb="calendar"] [role="gridcell"],
-    [data-baseweb="calendar"] [role="gridcell"] > div,
+    [data-baseweb="calendar"] [role="gridcell"] div,
+    [data-baseweb="calendar"] [role="gridcell"] div div,
     [data-baseweb="calendar"] td,
-    [data-baseweb="calendar"] td > div {{
+    [data-baseweb="calendar"] td div,
+    [data-baseweb="calendar"] td div div {{
         color: {_text} !important;
         background-color: transparent !important;
+        background: transparent !important;
     }}
-    /* Selected day */
+    /* Selected day - override with accent */
+    [data-baseweb="calendar"] [aria-selected="true"],
     [data-baseweb="calendar"] [aria-selected="true"] > div,
+    [data-baseweb="calendar"] [role="gridcell"][aria-selected="true"],
     [data-baseweb="calendar"] [role="gridcell"][aria-selected="true"] > div {{
         background-color: {_accent} !important;
+        background: {_accent} !important;
         color: #FFFFFF !important;
     }}
-    /* Hovered day */
-    [data-baseweb="calendar"] [role="gridcell"] > div:hover {{
+    /* Hovered day - subtle highlight, not white */
+    [data-baseweb="calendar"] [role="gridcell"]:hover,
+    [data-baseweb="calendar"] [role="gridcell"]:hover > div,
+    [data-baseweb="calendar"] [role="gridcell"] > div:hover,
+    [data-baseweb="calendar"] td:hover,
+    [data-baseweb="calendar"] td:hover > div,
+    [data-baseweb="calendar"] td > div:hover {{
         background-color: {_surface2} !important;
+        background: {_surface2} !important;
+        color: {_text} !important;
+    }}
+    /* "Today" marker - baseweb uses ::after pseudo or special styling */
+    [data-baseweb="calendar"] [role="gridcell"][aria-label*="selected"],
+    [data-baseweb="calendar"] [role="gridcell"][aria-selected="true"]:hover > div {{
+        background-color: {_accent} !important;
+        background: {_accent} !important;
+        color: #FFFFFF !important;
     }}
     /* Disabled / outside-month days */
     [data-baseweb="calendar"] [role="gridcell"][aria-disabled="true"],
-    [data-baseweb="calendar"] [role="gridcell"][aria-disabled="true"] > div {{
+    [data-baseweb="calendar"] [role="gridcell"][aria-disabled="true"] div {{
         color: {_muted} !important;
         opacity: 0.4;
+        background-color: transparent !important;
+        background: transparent !important;
     }}
     /* Popover wrapper holding the calendar */
     [data-baseweb="popover"][aria-label*="date"],
-    div[data-baseweb="popover"]:has([data-baseweb="calendar"]) {{
+    div[data-baseweb="popover"]:has([data-baseweb="calendar"]),
+    div[data-baseweb="popover"]:has([data-baseweb="calendar"]) > div,
+    div[data-baseweb="popover"]:has([data-baseweb="calendar"]) > div > div {{
         background-color: {_surface} !important;
-    }}
-    [data-baseweb="popover"]:has([data-baseweb="calendar"]) > div {{
-        background-color: {_surface} !important;
+        background: {_surface} !important;
     }}
     /* Universal baseweb input fix for all fields in dark mode */
     [data-baseweb="input"],
