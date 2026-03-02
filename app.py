@@ -493,45 +493,65 @@ st.markdown(f"""
     /* Scrollbar dark - global + all popover/dropdown scrollable areas */
     {'* { scrollbar-color: #3D4160 #1E2130; scrollbar-width: thin; }' if _dark else ''}
     {'''
-    /* Webkit scrollbar for selectbox dropdowns & all popovers */
+    /* Webkit scrollbar for selectbox dropdowns & all popovers - use !important on every layer */
     [data-baseweb="popover"] ul::-webkit-scrollbar,
-    [data-baseweb="popover"] div::-webkit-scrollbar,
-    [data-baseweb="menu"] ::-webkit-scrollbar,
-    [data-baseweb="select"] ::-webkit-scrollbar,
-    [role="listbox"]::-webkit-scrollbar {{
+    [data-baseweb="popover"] > div::-webkit-scrollbar,
+    [data-baseweb="popover"] > div > div::-webkit-scrollbar,
+    [data-baseweb="menu"]::-webkit-scrollbar,
+    [data-baseweb="menu"] > div::-webkit-scrollbar,
+    [role="listbox"]::-webkit-scrollbar,
+    ul[role="listbox"]::-webkit-scrollbar {
         width: 8px !important;
-    }}
+        background: #1E2130 !important;
+    }
     [data-baseweb="popover"] ul::-webkit-scrollbar-track,
-    [data-baseweb="popover"] div::-webkit-scrollbar-track,
-    [data-baseweb="menu"] ::-webkit-scrollbar-track,
-    [data-baseweb="select"] ::-webkit-scrollbar-track,
-    [role="listbox"]::-webkit-scrollbar-track {{
+    [data-baseweb="popover"] > div::-webkit-scrollbar-track,
+    [data-baseweb="popover"] > div > div::-webkit-scrollbar-track,
+    [data-baseweb="menu"]::-webkit-scrollbar-track,
+    [data-baseweb="menu"] > div::-webkit-scrollbar-track,
+    [role="listbox"]::-webkit-scrollbar-track,
+    ul[role="listbox"]::-webkit-scrollbar-track {
         background: #1E2130 !important;
         border-radius: 4px;
-    }}
+    }
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
-    [data-baseweb="popover"] div::-webkit-scrollbar-thumb,
-    [data-baseweb="menu"] ::-webkit-scrollbar-thumb,
-    [data-baseweb="select"] ::-webkit-scrollbar-thumb,
-    [role="listbox"]::-webkit-scrollbar-thumb {{
+    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb,
+    [data-baseweb="popover"] > div > div::-webkit-scrollbar-thumb,
+    [data-baseweb="menu"]::-webkit-scrollbar-thumb,
+    [data-baseweb="menu"] > div::-webkit-scrollbar-thumb,
+    [role="listbox"]::-webkit-scrollbar-thumb,
+    ul[role="listbox"]::-webkit-scrollbar-thumb {
         background: #3D4160 !important;
         border-radius: 4px;
-    }}
+        border: 2px solid #1E2130 !important;
+    }
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="popover"] div::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="menu"] ::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="select"] ::-webkit-scrollbar-thumb:hover,
-    [role="listbox"]::-webkit-scrollbar-thumb:hover {{
-        background: #4F5380 !important;
-    }}
+    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="popover"] > div > div::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="menu"]::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="menu"] > div::-webkit-scrollbar-thumb:hover,
+    [role="listbox"]::-webkit-scrollbar-thumb:hover,
+    ul[role="listbox"]::-webkit-scrollbar-thumb:hover {
+        background: #5B5F8A !important;
+    }
+    /* Force the scrollbar corner area dark */
+    [data-baseweb="popover"] ul::-webkit-scrollbar-corner,
+    [data-baseweb="popover"] > div::-webkit-scrollbar-corner,
+    [data-baseweb="menu"]::-webkit-scrollbar-corner,
+    [role="listbox"]::-webkit-scrollbar-corner {
+        background: #1E2130 !important;
+    }
     /* Firefox scrollbar for dropdown lists */
     [data-baseweb="popover"] ul,
-    [data-baseweb="popover"] div[style*="overflow"],
+    [data-baseweb="popover"] > div,
+    [data-baseweb="popover"] > div > div,
     [data-baseweb="menu"],
-    [role="listbox"] {{
+    [data-baseweb="menu"] > div,
+    [role="listbox"],
+    ul[role="listbox"] {
         scrollbar-color: #3D4160 #1E2130 !important;
         scrollbar-width: thin !important;
-    }}
+    }
     ''' if _dark else ''}
 </style>
 """, unsafe_allow_html=True)
