@@ -264,10 +264,6 @@ def render_timer_page():
 
     _render_timer_dashboard(user_id, tasks, task_options)
 
-    # ─── Today's Sessions ─────────────────────────────────────
-    st.markdown("---")
-    st.markdown("### 📊 Today's Sessions")
-
 
 @st.fragment
 def _render_timer_dashboard(user_id, tasks, task_options):
