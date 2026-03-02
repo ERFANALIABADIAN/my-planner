@@ -157,6 +157,17 @@ st.markdown(f"""
         transform: translateY(-1px);
         box-shadow: 0 2px 8px rgba(0,0,0,{'0.3' if _dark else '0.1'});
     }}
+    /* Disabled buttons - visible in dark mode */
+    .stButton > button:disabled,
+    .stButton > button[disabled] {{
+        background-color: {_surface2} !important;
+        color: {_muted} !important;
+        border: 1px solid {_border} !important;
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }}
     /* Tertiary = icon-only, borderless */
     .stButton > button[kind="tertiary"] {{
         background: transparent !important; border: none !important;
@@ -479,8 +490,49 @@ st.markdown(f"""
         [data-testid="stMetricValue"] {{ font-size: 1.2rem !important; }}
     }}
     html {{ scroll-behavior: smooth; }}
-    /* Scrollbar dark */
-    {'* { scrollbar-color: #3D4160 #1E2130; }' if _dark else ''}
+    /* Scrollbar dark - global + all popover/dropdown scrollable areas */
+    {'* { scrollbar-color: #3D4160 #1E2130; scrollbar-width: thin; }' if _dark else ''}
+    {'''
+    /* Webkit scrollbar for selectbox dropdowns & all popovers */
+    [data-baseweb="popover"] ul::-webkit-scrollbar,
+    [data-baseweb="popover"] div::-webkit-scrollbar,
+    [data-baseweb="menu"] ::-webkit-scrollbar,
+    [data-baseweb="select"] ::-webkit-scrollbar,
+    [role="listbox"]::-webkit-scrollbar {{
+        width: 8px !important;
+    }}
+    [data-baseweb="popover"] ul::-webkit-scrollbar-track,
+    [data-baseweb="popover"] div::-webkit-scrollbar-track,
+    [data-baseweb="menu"] ::-webkit-scrollbar-track,
+    [data-baseweb="select"] ::-webkit-scrollbar-track,
+    [role="listbox"]::-webkit-scrollbar-track {{
+        background: #1E2130 !important;
+        border-radius: 4px;
+    }}
+    [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
+    [data-baseweb="popover"] div::-webkit-scrollbar-thumb,
+    [data-baseweb="menu"] ::-webkit-scrollbar-thumb,
+    [data-baseweb="select"] ::-webkit-scrollbar-thumb,
+    [role="listbox"]::-webkit-scrollbar-thumb {{
+        background: #3D4160 !important;
+        border-radius: 4px;
+    }}
+    [data-baseweb="popover"] ul::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="popover"] div::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="menu"] ::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="select"] ::-webkit-scrollbar-thumb:hover,
+    [role="listbox"]::-webkit-scrollbar-thumb:hover {{
+        background: #4F5380 !important;
+    }}
+    /* Firefox scrollbar for dropdown lists */
+    [data-baseweb="popover"] ul,
+    [data-baseweb="popover"] div[style*="overflow"],
+    [data-baseweb="menu"],
+    [role="listbox"] {{
+        scrollbar-color: #3D4160 #1E2130 !important;
+        scrollbar-width: thin !important;
+    }}
+    ''' if _dark else ''}
 </style>
 """, unsafe_allow_html=True)
 
