@@ -490,71 +490,61 @@ st.markdown(f"""
         [data-testid="stMetricValue"] {{ font-size: 1.2rem !important; }}
     }}
     html {{ scroll-behavior: smooth; }}
-    /* Scrollbar dark - global + all popover/dropdown scrollable areas */
+    /* Scrollbar dark - global */
     {'* { scrollbar-color: #3D4160 #1E2130; scrollbar-width: thin; }' if _dark else ''}
     {'''
-    /* Hide scrollbar by default, show on hover of the dropdown container */
-    [data-baseweb="popover"] ul::-webkit-scrollbar,
-    [data-baseweb="popover"] > div::-webkit-scrollbar,
-    [data-baseweb="popover"] > div > div::-webkit-scrollbar,
-    [data-baseweb="menu"]::-webkit-scrollbar,
-    [role="listbox"]::-webkit-scrollbar,
-    ul[role="listbox"]::-webkit-scrollbar {
-        width: 8px !important;
-        background: transparent !important;
-    }
-    [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
-    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb,
-    [data-baseweb="popover"] > div > div::-webkit-scrollbar-thumb,
-    [data-baseweb="menu"]::-webkit-scrollbar-thumb,
-    [role="listbox"]::-webkit-scrollbar-thumb,
-    ul[role="listbox"]::-webkit-scrollbar-thumb {
-        background: transparent !important;
-        border-radius: 4px;
-    }
-    /* Show scrollbar when hovering the dropdown list */
-    [data-baseweb="popover"] ul:hover::-webkit-scrollbar-thumb,
-    [data-baseweb="popover"] > div:hover::-webkit-scrollbar-thumb,
-    [data-baseweb="popover"] > div > div:hover::-webkit-scrollbar-thumb,
-    [data-baseweb="menu"]:hover::-webkit-scrollbar-thumb,
-    [role="listbox"]:hover::-webkit-scrollbar-thumb,
-    ul[role="listbox"]:hover::-webkit-scrollbar-thumb {
-        background: #3D4160 !important;
-    }
-    [data-baseweb="popover"] ul:hover::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="popover"] > div:hover::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="popover"] > div > div:hover::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="menu"]:hover::-webkit-scrollbar-thumb:hover,
-    [role="listbox"]:hover::-webkit-scrollbar-thumb:hover,
-    ul[role="listbox"]:hover::-webkit-scrollbar-thumb:hover {
-        background: #5B5F8A !important;
-    }
-    [data-baseweb="popover"] ul:hover::-webkit-scrollbar-track,
-    [data-baseweb="popover"] > div:hover::-webkit-scrollbar-track,
-    [data-baseweb="popover"] > div > div:hover::-webkit-scrollbar-track,
-    [data-baseweb="menu"]:hover::-webkit-scrollbar-track,
-    [role="listbox"]:hover::-webkit-scrollbar-track,
-    ul[role="listbox"]:hover::-webkit-scrollbar-track {
-        background: #1E2130 !important;
-        border-radius: 4px;
-    }
-    /* Firefox: auto-hide scrollbar, show on hover */
+    /* ── Dropdown / popover scrollbar (dark mode) ──────────── */
+    /* The scrollable container is the ul or a wrapper div; style it directly */
     [data-baseweb="popover"] ul,
     [data-baseweb="popover"] > div,
-    [data-baseweb="popover"] > div > div,
+    [data-baseweb="popover"] > div > ul,
     [data-baseweb="menu"],
     [role="listbox"],
     ul[role="listbox"] {
-        scrollbar-color: transparent transparent !important;
+        scrollbar-color: #3D4160 transparent !important;
         scrollbar-width: thin !important;
+        /* Webkit: use overlay so scrollbar doesn't push content */
+        overflow-y: auto !important;
     }
-    [data-baseweb="popover"] ul:hover,
-    [data-baseweb="popover"] > div:hover,
-    [data-baseweb="popover"] > div > div:hover,
-    [data-baseweb="menu"]:hover,
-    [role="listbox"]:hover,
-    ul[role="listbox"]:hover {
-        scrollbar-color: #3D4160 #1E2130 !important;
+    /* Webkit: scrollbar gutter */
+    [data-baseweb="popover"] ul::-webkit-scrollbar,
+    [data-baseweb="popover"] > div::-webkit-scrollbar,
+    [data-baseweb="menu"]::-webkit-scrollbar,
+    [role="listbox"]::-webkit-scrollbar,
+    ul[role="listbox"]::-webkit-scrollbar {
+        width: 6px !important;
+        background: transparent !important;
+    }
+    /* Webkit: track */
+    [data-baseweb="popover"] ul::-webkit-scrollbar-track,
+    [data-baseweb="popover"] > div::-webkit-scrollbar-track,
+    [data-baseweb="menu"]::-webkit-scrollbar-track,
+    [role="listbox"]::-webkit-scrollbar-track,
+    ul[role="listbox"]::-webkit-scrollbar-track {
+        background: transparent !important;
+    }
+    /* Webkit: thumb - always dark, never transparent */
+    [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
+    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb,
+    [data-baseweb="menu"]::-webkit-scrollbar-thumb,
+    [role="listbox"]::-webkit-scrollbar-thumb,
+    ul[role="listbox"]::-webkit-scrollbar-thumb {
+        background: #3D4160 !important;
+        border-radius: 3px !important;
+    }
+    [data-baseweb="popover"] ul::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="menu"]::-webkit-scrollbar-thumb:hover,
+    [role="listbox"]::-webkit-scrollbar-thumb:hover,
+    ul[role="listbox"]::-webkit-scrollbar-thumb:hover {
+        background: #5B5F8A !important;
+    }
+    /* Prevent li hover from covering the scrollbar track */
+    [data-baseweb="popover"] li,
+    [data-baseweb="menu"] li,
+    [role="listbox"] li,
+    [role="option"] {
+        margin-right: 0 !important;
     }
     ''' if _dark else ''}
 </style>
