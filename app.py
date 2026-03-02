@@ -145,6 +145,7 @@ st.markdown(f"""
     [data-baseweb="popover"] li {{
         background-color: {_surface} !important;
         color: {_text} !important;
+        margin-right: 6px !important;
     }}
     [data-baseweb="popover"] li:hover {{
         background-color: {_surface2} !important;
@@ -491,29 +492,28 @@ st.markdown(f"""
     }}
     html {{ scroll-behavior: smooth; }}
     /* Scrollbar dark - global */
-    {'* { scrollbar-color: #555870 #1E2130; scrollbar-width: thin; }' if _dark else ''}
+    {'* { scrollbar-color: #7B7EA0 #1E2130; scrollbar-width: thin; }' if _dark else ''}
     {'''
     /* ── Dropdown / popover scrollbar (dark mode) ──────────── */
-    /* The scrollable container is the ul or a wrapper div; style it directly */
     [data-baseweb="popover"] ul,
     [data-baseweb="popover"] > div,
     [data-baseweb="popover"] > div > ul,
     [data-baseweb="menu"],
     [role="listbox"],
     ul[role="listbox"] {
-        scrollbar-color: #3D4160 transparent !important;
+        scrollbar-color: #7B7EA0 #1E2130 !important;
         scrollbar-width: thin !important;
-        /* Webkit: use overlay so scrollbar doesn't push content */
         overflow-y: auto !important;
+        scrollbar-gutter: stable !important;
     }
-    /* Webkit: scrollbar gutter */
+    /* Webkit: scrollbar width */
     [data-baseweb="popover"] ul::-webkit-scrollbar,
     [data-baseweb="popover"] > div::-webkit-scrollbar,
     [data-baseweb="menu"]::-webkit-scrollbar,
     [role="listbox"]::-webkit-scrollbar,
     ul[role="listbox"]::-webkit-scrollbar {
         width: 6px !important;
-        background: transparent !important;
+        background: #1E2130 !important;
     }
     /* Webkit: track */
     [data-baseweb="popover"] ul::-webkit-scrollbar-track,
@@ -521,30 +521,32 @@ st.markdown(f"""
     [data-baseweb="menu"]::-webkit-scrollbar-track,
     [role="listbox"]::-webkit-scrollbar-track,
     ul[role="listbox"]::-webkit-scrollbar-track {
-        background: transparent !important;
+        background: #1E2130 !important;
     }
-    /* Webkit: thumb - brighter for visibility */
+    /* Webkit: thumb - clearly visible against dropdown bg */
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
     [data-baseweb="popover"] > div::-webkit-scrollbar-thumb,
     [data-baseweb="menu"]::-webkit-scrollbar-thumb,
     [role="listbox"]::-webkit-scrollbar-thumb,
     ul[role="listbox"]::-webkit-scrollbar-thumb {
-        background: #555870 !important;
+        background: #7B7EA0 !important;
         border-radius: 3px !important;
+        min-height: 30px !important;
     }
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb:hover,
     [data-baseweb="popover"] > div::-webkit-scrollbar-thumb:hover,
     [data-baseweb="menu"]::-webkit-scrollbar-thumb:hover,
     [role="listbox"]::-webkit-scrollbar-thumb:hover,
     ul[role="listbox"]::-webkit-scrollbar-thumb:hover {
-        background: #777990 !important;
+        background: #9B9EC0 !important;
     }
-    /* Prevent li hover from covering the scrollbar track */
+    /* Ensure li items don't paint over the scrollbar area */
     [data-baseweb="popover"] li,
     [data-baseweb="menu"] li,
     [role="listbox"] li,
     [role="option"] {
-        margin-right: 0 !important;
+        margin-right: 6px !important;
+        box-sizing: border-box !important;
     }
     ''' if _dark else ''}
 </style>
