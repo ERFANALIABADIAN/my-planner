@@ -491,7 +491,7 @@ st.markdown(f"""
     }}
     html {{ scroll-behavior: smooth; }}
     /* Scrollbar dark - global */
-    {'* { scrollbar-color: #3D4160 #1E2130; scrollbar-width: thin; }' if _dark else ''}
+    {'* { scrollbar-color: #555870 #1E2130; scrollbar-width: thin; }' if _dark else ''}
     {'''
     /* ── Dropdown / popover scrollbar (dark mode) ──────────── */
     /* The scrollable container is the ul or a wrapper div; style it directly */
@@ -523,13 +523,13 @@ st.markdown(f"""
     ul[role="listbox"]::-webkit-scrollbar-track {
         background: transparent !important;
     }
-    /* Webkit: thumb - always dark, never transparent */
+    /* Webkit: thumb - brighter for visibility */
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
     [data-baseweb="popover"] > div::-webkit-scrollbar-thumb,
     [data-baseweb="menu"]::-webkit-scrollbar-thumb,
     [role="listbox"]::-webkit-scrollbar-thumb,
     ul[role="listbox"]::-webkit-scrollbar-thumb {
-        background: #3D4160 !important;
+        background: #555870 !important;
         border-radius: 3px !important;
     }
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb:hover,
@@ -537,7 +537,7 @@ st.markdown(f"""
     [data-baseweb="menu"]::-webkit-scrollbar-thumb:hover,
     [role="listbox"]::-webkit-scrollbar-thumb:hover,
     ul[role="listbox"]::-webkit-scrollbar-thumb:hover {
-        background: #5B5F8A !important;
+        background: #777990 !important;
     }
     /* Prevent li hover from covering the scrollbar track */
     [data-baseweb="popover"] li,
