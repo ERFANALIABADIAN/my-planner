@@ -145,7 +145,6 @@ st.markdown(f"""
     [data-baseweb="popover"] li {{
         background-color: {_surface} !important;
         color: {_text} !important;
-        margin-right: 6px !important;
     }}
     [data-baseweb="popover"] li:hover {{
         background-color: {_surface2} !important;
@@ -491,63 +490,48 @@ st.markdown(f"""
         [data-testid="stMetricValue"] {{ font-size: 1.2rem !important; }}
     }}
     html {{ scroll-behavior: smooth; }}
-    /* Scrollbar dark - global */
-    {'* { scrollbar-color: #7B7EA0 #1E2130; scrollbar-width: thin; }' if _dark else ''}
+    /* Scrollbar dark - global + all popover/dropdown scrollable areas */
+    {'* { scrollbar-color: #3D4160 #1E2130; scrollbar-width: thin; }' if _dark else ''}
     {'''
-    /* ── Dropdown / popover scrollbar (dark mode) ──────────── */
-    [data-baseweb="popover"] ul,
-    [data-baseweb="popover"] > div,
-    [data-baseweb="popover"] > div > ul,
-    [data-baseweb="menu"],
-    [role="listbox"],
-    ul[role="listbox"] {
-        scrollbar-color: #7B7EA0 #1E2130 !important;
-        scrollbar-width: thin !important;
-        overflow-y: auto !important;
-        scrollbar-gutter: stable !important;
-    }
-    /* Webkit: scrollbar width */
+    /* Webkit scrollbar for selectbox dropdowns & all popovers */
     [data-baseweb="popover"] ul::-webkit-scrollbar,
-    [data-baseweb="popover"] > div::-webkit-scrollbar,
-    [data-baseweb="menu"]::-webkit-scrollbar,
-    [role="listbox"]::-webkit-scrollbar,
-    ul[role="listbox"]::-webkit-scrollbar {
-        width: 6px !important;
-        background: #1E2130 !important;
-    }
-    /* Webkit: track */
+    [data-baseweb="popover"] div::-webkit-scrollbar,
+    [data-baseweb="menu"] ::-webkit-scrollbar,
+    [data-baseweb="select"] ::-webkit-scrollbar,
+    [role="listbox"]::-webkit-scrollbar {{
+        width: 8px !important;
+    }}
     [data-baseweb="popover"] ul::-webkit-scrollbar-track,
-    [data-baseweb="popover"] > div::-webkit-scrollbar-track,
-    [data-baseweb="menu"]::-webkit-scrollbar-track,
-    [role="listbox"]::-webkit-scrollbar-track,
-    ul[role="listbox"]::-webkit-scrollbar-track {
+    [data-baseweb="popover"] div::-webkit-scrollbar-track,
+    [data-baseweb="menu"] ::-webkit-scrollbar-track,
+    [data-baseweb="select"] ::-webkit-scrollbar-track,
+    [role="listbox"]::-webkit-scrollbar-track {{
         background: #1E2130 !important;
-    }
-    /* Webkit: thumb - clearly visible against dropdown bg */
+        border-radius: 4px;
+    }}
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb,
-    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb,
-    [data-baseweb="menu"]::-webkit-scrollbar-thumb,
-    [role="listbox"]::-webkit-scrollbar-thumb,
-    ul[role="listbox"]::-webkit-scrollbar-thumb {
-        background: #7B7EA0 !important;
-        border-radius: 3px !important;
-        min-height: 30px !important;
-    }
+    [data-baseweb="popover"] div::-webkit-scrollbar-thumb,
+    [data-baseweb="menu"] ::-webkit-scrollbar-thumb,
+    [data-baseweb="select"] ::-webkit-scrollbar-thumb,
+    [role="listbox"]::-webkit-scrollbar-thumb {{
+        background: #3D4160 !important;
+        border-radius: 4px;
+    }}
     [data-baseweb="popover"] ul::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="popover"] > div::-webkit-scrollbar-thumb:hover,
-    [data-baseweb="menu"]::-webkit-scrollbar-thumb:hover,
-    [role="listbox"]::-webkit-scrollbar-thumb:hover,
-    ul[role="listbox"]::-webkit-scrollbar-thumb:hover {
-        background: #9B9EC0 !important;
-    }
-    /* Ensure li items don't paint over the scrollbar area */
-    [data-baseweb="popover"] li,
-    [data-baseweb="menu"] li,
-    [role="listbox"] li,
-    [role="option"] {
-        margin-right: 6px !important;
-        box-sizing: border-box !important;
-    }
+    [data-baseweb="popover"] div::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="menu"] ::-webkit-scrollbar-thumb:hover,
+    [data-baseweb="select"] ::-webkit-scrollbar-thumb:hover,
+    [role="listbox"]::-webkit-scrollbar-thumb:hover {{
+        background: #4F5380 !important;
+    }}
+    /* Firefox scrollbar for dropdown lists */
+    [data-baseweb="popover"] ul,
+    [data-baseweb="popover"] div[style*="overflow"],
+    [data-baseweb="menu"],
+    [role="listbox"] {{
+        scrollbar-color: #3D4160 #1E2130 !important;
+        scrollbar-width: thin !important;
+    }}
     ''' if _dark else ''}
 </style>
 """, unsafe_allow_html=True)
