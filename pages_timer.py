@@ -169,16 +169,23 @@ def render_timer_page():
         st.session_state['pomodoro_minutes']     = active_timer_db['pomodoro_minutes']
         st.session_state['db_synced'] = True
 
-    # ─── Sync selectbox key → active task (timer running or paused) ─────────
+    # ─── Sync selectbox keys → active task (timer running or paused) ──────
     # This must happen BEFORE st.selectbox() renders so the widget shows correctly.
     active_task_id = st.session_state.get('timer_task_id')
     if active_task_id and (st.session_state['timer_running']
                            or st.session_state.get('timer_paused_elapsed', 0) > 0):
-        correct_label = next(
-            (lbl for lbl, tid in task_options.items() if tid == active_task_id), None
-        )
-        if correct_label:
-            st.session_state['timer_task_select'] = correct_label
+        # Find the task to get its category
+        active_task = next((t for t in tasks if t['id'] == active_task_id), None)
+        if active_task:
+            # Sync category selectbox
+            correct_cat_label = next(
+                (f"{c['icon']} {c['name']}" for c in categories if c['id'] == active_task['category_id']), None
+            )
+            if correct_cat_label:
+                st.session_state['timer_category_select'] = correct_cat_label
+            # Sync task selectbox
+            correct_task_label = f"{active_task['category_icon']} {active_task['title']}"
+            st.session_state['timer_task_select'] = correct_task_label
 
     # ─── Sync subtask selectbox ───────────────────────────────────────────────
     active_subtask_id = st.session_state.get('timer_subtask_id')
@@ -262,11 +269,11 @@ def render_timer_page():
                         st.session_state.pop('confirm_delete', None)
                         st.rerun()
 
-    _render_timer_dashboard(user_id, tasks, task_options)
+    _render_timer_dashboard(user_id, tasks, task_options, categories)
 
 
 @st.fragment
-def _render_timer_dashboard(user_id, tasks, task_options):
+def _render_timer_dashboard(user_id, tasks, task_options, categories):
     """Fragment-based timer dashboard for snappy UI updates without full page refreshes."""
     
     # ─── Timer Configuration ──────────────────────────────────
@@ -275,29 +282,59 @@ def _render_timer_dashboard(user_id, tasks, task_options):
     with col_config:
         st.markdown("### 🎯 Select Task")
 
-        selected_task_label = st.selectbox(
-            "Task",
-            options=list(task_options.keys()),
-            label_visibility="collapsed",
-            key="timer_task_select"
-        )
-        selected_task_id = task_options[selected_task_label]
+        # Step 1: Category selection
+        cat_options = {"— Select a category —": None}
+        for c in categories:
+            cat_label = f"{c['icon']} {c['name']}"
+            cat_options[cat_label] = c['id']
 
-        # Optional subtask selection
-        subtasks = db.get_subtasks(selected_task_id)
+        selected_cat_label = st.selectbox(
+            "Category",
+            options=list(cat_options.keys()),
+            key="timer_category_select"
+        )
+        selected_cat_id = cat_options[selected_cat_label]
+
+        # Step 2: Task selection (only shown when a category is selected)
+        selected_task_id = None
         selected_subtask_id = None
-        if subtasks:
-            undone_subtasks = [s for s in subtasks if not s['is_done']]
-            if undone_subtasks:
-                sub_options = {"None": None}
-                for s in undone_subtasks:
-                    sub_options[s['title']] = s['id']
-                selected_sub_label = st.selectbox(
-                    "Subtask (optional)",
-                    options=list(sub_options.keys()),
-                    key="timer_subtask_select"
+        _needs_task = True  # Must pick a task to start timer
+
+        if selected_cat_id is not None:
+            # Filter tasks for the selected category
+            cat_tasks = [t for t in tasks if t['category_id'] == selected_cat_id]
+            if cat_tasks:
+                cat_task_options = {"— Select a task —": None}
+                for t in cat_tasks:
+                    label = f"{t['category_icon']} {t['title']}"
+                    cat_task_options[label] = t['id']
+
+                selected_task_label = st.selectbox(
+                    "Task",
+                    options=list(cat_task_options.keys()),
+                    key="timer_task_select"
                 )
-                selected_subtask_id = sub_options[selected_sub_label]
+                selected_task_id = cat_task_options[selected_task_label]
+
+                if selected_task_id is not None:
+                    _needs_task = False  # Valid task selected
+
+                    # Step 3: Subtask selection (only shown when a task is selected)
+                    subtasks = db.get_subtasks(selected_task_id)
+                    if subtasks:
+                        undone_subtasks = [s for s in subtasks if not s['is_done']]
+                        if undone_subtasks:
+                            sub_options = {"None": None}
+                            for s in undone_subtasks:
+                                sub_options[s['title']] = s['id']
+                            selected_sub_label = st.selectbox(
+                                "Subtask (optional)",
+                                options=list(sub_options.keys()),
+                                key="timer_subtask_select"
+                            )
+                            selected_subtask_id = sub_options[selected_sub_label]
+            else:
+                st.info("No active tasks in this category.")
 
         st.markdown("---")
         st.markdown("### ⏰ Timer Mode")
@@ -405,7 +442,9 @@ def _render_timer_dashboard(user_id, tasks, task_options):
                 # State 1: Not started - Centered Start Button
                 _, col_center, _ = st.columns([1, 2, 1])
                 with col_center:
-                    if st.button("Start", use_container_width=True, type="primary"):
+                    # Block start if category is selected but no task chosen
+                    _can_start = not _needs_task
+                    if st.button("Start", use_container_width=True, type="primary", disabled=not _can_start):
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = selected_task_id
