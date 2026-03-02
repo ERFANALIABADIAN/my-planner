@@ -295,46 +295,53 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
         )
         selected_cat_id = cat_options[selected_cat_label]
 
-        # Step 2: Task selection (only shown when a category is selected)
+        # Step 2: Task selection
         selected_task_id = None
         selected_subtask_id = None
         _needs_task = True  # Must pick a task to start timer
 
         if selected_cat_id is not None:
             # Filter tasks for the selected category
-            cat_tasks = [t for t in tasks if t['category_id'] == selected_cat_id]
-            if cat_tasks:
-                cat_task_options = {"— Select a task —": None}
-                for t in cat_tasks:
-                    label = f"{t['category_icon']} {t['title']}"
-                    cat_task_options[label] = t['id']
+            available_tasks = [t for t in tasks if t['category_id'] == selected_cat_id]
+        else:
+            # No category selected — show all tasks
+            available_tasks = list(tasks)
 
-                selected_task_label = st.selectbox(
-                    "Task",
-                    options=list(cat_task_options.keys()),
-                    key="timer_task_select"
-                )
-                selected_task_id = cat_task_options[selected_task_label]
+        if available_tasks:
+            task_default = "— Select a task —"
+            cat_task_options = {task_default: None}
+            for t in available_tasks:
+                label = f"{t['category_icon']} {t['title']}"
+                if selected_cat_id is None:
+                    label += f" ({t['category_name']})"
+                cat_task_options[label] = t['id']
 
-                if selected_task_id is not None:
-                    _needs_task = False  # Valid task selected
+            selected_task_label = st.selectbox(
+                "Task",
+                options=list(cat_task_options.keys()),
+                key="timer_task_select"
+            )
+            selected_task_id = cat_task_options[selected_task_label]
 
-                    # Step 3: Subtask selection (only shown when a task is selected)
-                    subtasks = db.get_subtasks(selected_task_id)
-                    if subtasks:
-                        undone_subtasks = [s for s in subtasks if not s['is_done']]
-                        if undone_subtasks:
-                            sub_options = {"None": None}
-                            for s in undone_subtasks:
-                                sub_options[s['title']] = s['id']
-                            selected_sub_label = st.selectbox(
-                                "Subtask (optional)",
-                                options=list(sub_options.keys()),
-                                key="timer_subtask_select"
-                            )
-                            selected_subtask_id = sub_options[selected_sub_label]
-            else:
-                st.info("No active tasks in this category.")
+            if selected_task_id is not None:
+                _needs_task = False  # Valid task selected
+
+                # Step 3: Subtask selection (only shown when a task is selected)
+                subtasks = db.get_subtasks(selected_task_id)
+                if subtasks:
+                    undone_subtasks = [s for s in subtasks if not s['is_done']]
+                    if undone_subtasks:
+                        sub_options = {"None": None}
+                        for s in undone_subtasks:
+                            sub_options[s['title']] = s['id']
+                        selected_sub_label = st.selectbox(
+                            "Subtask (optional)",
+                            options=list(sub_options.keys()),
+                            key="timer_subtask_select"
+                        )
+                        selected_subtask_id = sub_options[selected_sub_label]
+        elif selected_cat_id is not None:
+            st.info("No active tasks in this category.")
 
         st.markdown("---")
         st.markdown("### ⏰ Timer Mode")
