@@ -292,6 +292,74 @@ st.markdown(f"""
         background-color: {_input} !important;
         border-color: {_border} !important;
     }}
+    /* ── Datepicker calendar popup (dark mode fix) ─────────── */
+    [data-baseweb="calendar"],
+    [data-baseweb="datepicker"] {{
+        background-color: {_surface} !important;
+        color: {_text} !important;
+    }}
+    /* Month/Year header row */
+    [data-baseweb="calendar"] [data-baseweb="calendar-header"],
+    [data-baseweb="calendar"] > div:first-child {{
+        background-color: {_surface} !important;
+        color: {_text} !important;
+    }}
+    /* Month & year select dropdowns */
+    [data-baseweb="calendar"] select,
+    [data-baseweb="calendar"] [data-baseweb="select"] > div {{
+        background-color: {_surface2} !important;
+        color: {_text} !important;
+        border-color: {_border} !important;
+    }}
+    [data-baseweb="calendar"] [data-baseweb="select"] span,
+    [data-baseweb="calendar"] [data-baseweb="select"] div {{
+        color: {_text} !important;
+    }}
+    /* Navigation arrows */
+    [data-baseweb="calendar"] button {{
+        color: {_text} !important;
+        background-color: transparent !important;
+    }}
+    [data-baseweb="calendar"] button:hover {{
+        background-color: {_surface2} !important;
+    }}
+    /* Weekday header labels (Su, Mo, Tu...) */
+    [data-baseweb="calendar"] th,
+    [data-baseweb="calendar"] [role="columnheader"] {{
+        color: {_muted} !important;
+    }}
+    /* Day cells */
+    [data-baseweb="calendar"] [role="gridcell"],
+    [data-baseweb="calendar"] [role="gridcell"] > div,
+    [data-baseweb="calendar"] td,
+    [data-baseweb="calendar"] td > div {{
+        color: {_text} !important;
+        background-color: transparent !important;
+    }}
+    /* Selected day */
+    [data-baseweb="calendar"] [aria-selected="true"] > div,
+    [data-baseweb="calendar"] [role="gridcell"][aria-selected="true"] > div {{
+        background-color: {_accent} !important;
+        color: #FFFFFF !important;
+    }}
+    /* Hovered day */
+    [data-baseweb="calendar"] [role="gridcell"] > div:hover {{
+        background-color: {_surface2} !important;
+    }}
+    /* Disabled / outside-month days */
+    [data-baseweb="calendar"] [role="gridcell"][aria-disabled="true"],
+    [data-baseweb="calendar"] [role="gridcell"][aria-disabled="true"] > div {{
+        color: {_muted} !important;
+        opacity: 0.4;
+    }}
+    /* Popover wrapper holding the calendar */
+    [data-baseweb="popover"][aria-label*="date"],
+    div[data-baseweb="popover"]:has([data-baseweb="calendar"]) {{
+        background-color: {_surface} !important;
+    }}
+    [data-baseweb="popover"]:has([data-baseweb="calendar"]) > div {{
+        background-color: {_surface} !important;
+    }}
     /* Universal baseweb input fix for all fields in dark mode */
     [data-baseweb="input"],
     [data-baseweb="base-input"],
