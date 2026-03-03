@@ -654,6 +654,37 @@ with st.container(key=f"_page_{current_page}"):
     elif current_page == 'analytics':
         render_analytics_page()
 
+# ─── Scroll to top when requested ─────────────────────────────
+if st.session_state.pop('_scroll_to_top', False):
+    import streamlit.components.v1 as _components
+    _components.html(
+        """<script>
+        (function(){
+            var w = window.parent, d = w.document;
+            function scrollUp(){
+                w.scrollTo({top:0, behavior:'smooth'});
+                d.documentElement.scrollTop = 0;
+                var containers = [
+                    '[data-testid="stAppViewContainer"]',
+                    '[data-testid="stMainBlockContainer"]',
+                    '[data-testid="stMain"]',
+                    'section.main',
+                    '.main'
+                ];
+                containers.forEach(function(sel){
+                    try {
+                        var el = d.querySelector(sel);
+                        if(el) el.scrollTo({top:0, behavior:'smooth'});
+                    } catch(e){}
+                });
+            }
+            scrollUp();
+            setTimeout(scrollUp, 100);
+        })();
+        </script>""",
+        height=0,
+    )
+
 # ─── Sidebar Footer (Refresh / Logout) ───────────────────────
 with st.sidebar:
     st.markdown("<div style='margin-top: 2rem;'></div>", unsafe_allow_html=True)

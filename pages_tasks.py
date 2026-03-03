@@ -597,27 +597,12 @@ def render_tasks_page():
         st.session_state['add_task_open'] = False
         st.session_state['_tasks_initialized'] = True
     
-    # ─── Permanent container for confirm-delete + scroll-to-top ────────────
+    # ─── Permanent container for confirm-delete ────────────────────────────
     # ALWAYS create this container so the widget tree below stays stable
     # whether or not a delete confirmation is pending.
     _confirm_box = st.container()
 
     with _confirm_box:
-        # Scroll-to-top trigger
-        _do_scroll = "true" if st.session_state.pop('_scroll_to_top', False) else "false"
-        components.html(
-            f'<script>if({_do_scroll}){{'
-            'var w=window.parent,d=w.document;'
-            'function go(){'
-            'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
-            'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
-            'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
-            '}'
-            'go();setTimeout(go,50);setTimeout(go,200);'
-            '}</script>',
-            height=0
-        )
-
         # Delete confirmation UI (rendered INSIDE the permanent container)
         if st.session_state.get('confirm_delete'):
             cd = st.session_state['confirm_delete']
