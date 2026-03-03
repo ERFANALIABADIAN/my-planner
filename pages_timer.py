@@ -63,6 +63,42 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
             var totalSeconds = {total_seconds};
             var startTime = Date.now();
             var defaultTextColor = "{text_color}";
+            var notified = false;
+
+            // Request notification permission on load
+            if (mode === 'pomodoro' && isRunning && typeof Notification !== 'undefined' && Notification.permission === 'default') {{
+                Notification.requestPermission();
+            }}
+
+            // Play a short beep using Web Audio API
+            function playBeep() {{
+                try {{
+                    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    var osc = ctx.createOscillator();
+                    var gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 830;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.8);
+                    // Play a second beep after a short pause
+                    setTimeout(function() {{
+                        var osc2 = ctx.createOscillator();
+                        var gain2 = ctx.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(ctx.destination);
+                        osc2.frequency.value = 1000;
+                        osc2.type = 'sine';
+                        gain2.gain.setValueAtTime(0.5, ctx.currentTime);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+                        osc2.start(ctx.currentTime);
+                        osc2.stop(ctx.currentTime + 0.6);
+                    }}, 400);
+                }} catch(e) {{}}
+            }}
 
             function formatTime(sec) {{
                 sec = Math.max(0, Math.floor(sec));
@@ -92,19 +128,31 @@ def js_timer_component(elapsed_seconds: int, is_running: bool, mode: str = "stop
                     display.textContent = formatTime(remaining);
                     display.style.color = remaining === 0 ? '#EF4444' : defaultTextColor;
                     if (remaining === 0 && isRunning) {{
-                        status.textContent = '🍅 Time is up!';
+                        status.textContent = '🍅 Time is up! Saving...';
                         status.style.color = '#EF4444';
+                        // Fire notification and sound only once
+                        if (!notified) {{
+                            notified = true;
+                            playBeep();
+                            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {{
+                                new Notification('🍅 Pomodoro Complete!', {{
+                                    body: 'Your focus session has ended. Time saved automatically.',
+                                    icon: '🍅',
+                                    requireInteraction: false
+                                }});
+                            }}
+                        }}
                     }}
                 }} else {{
                     display.textContent = formatTime(current);
                     display.style.color = defaultTextColor;
                 }}
 
-                if (isRunning) {{
+                if (isRunning && !(mode === 'pomodoro' && Math.max(0, totalSeconds - current) === 0)) {{
                     status.innerHTML = '<span style="animation:pulse 2s infinite;">🔴 Running...</span>';
-                }} else if (current > 0) {{
+                }} else if (!isRunning && current > 0) {{
                     status.textContent = '⏸ Paused';
-                }} else {{
+                }} else if (!isRunning && current === 0) {{
                     status.textContent = '';
                 }}
             }}
@@ -342,7 +390,6 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                             selected_subtask_id = sub_options[selected_sub_label]
             else:
                 # Category has no tasks – allow starting under this category
-                st.info("No active tasks in this category. Timer will log under this category.")
                 _can_start = True
                 # _is_freestyle stays False; we'll create a task under this category at start time
                 st.session_state['_timer_empty_cat_id'] = selected_cat_id
@@ -437,6 +484,12 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 mode="pomodoro",
                 total_seconds=total_seconds
             )
+            # Auto-refresh: schedule a single rerun at exactly when pomodoro finishes
+            if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
+                remaining_secs = max(0, total_seconds - elapsed)
+                if remaining_secs > 0:
+                    # Add 1.5s buffer so JS has time to show notification before Python saves
+                    st_autorefresh(interval=int((remaining_secs + 1.5) * 1000), limit=1, key="pomodoro_auto_save")
         else:
             js_timer_component(
                 elapsed_seconds=elapsed,
@@ -448,6 +501,12 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
         do_save = False
         final_elapsed = 0
         pom_mins = st.session_state.get('pomodoro_minutes', 25)
+
+        # ── Pomodoro auto-save: if time is up, auto-trigger save ──
+        if (mode_str == "pomodoro" and st.session_state['timer_running']
+                and elapsed >= total_seconds):
+            final_elapsed = total_seconds  # Cap at pomodoro duration
+            do_save = True
 
         st.write("") # Spacer
 
