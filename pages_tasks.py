@@ -690,7 +690,15 @@ def render_tasks_page():
             cat_options[f"{c['icon']} {c['name']}"] = c['id']
         
         # Ensure 'main_cat_filter' in session_state matches sidebar_cat_id
-        if 'main_cat_filter' not in st.session_state:
+        # Always re-sync from filter_cat_id so the selectbox stays correct
+        # even after widget-tree shifts (e.g. confirmation box appearing/disappearing).
+        if sidebar_cat_id is not None:
+            _correct_label = next(
+                (label for label, cid in cat_options.items() if cid == sidebar_cat_id),
+                "All Categories"
+            )
+            st.session_state['main_cat_filter'] = _correct_label
+        elif 'main_cat_filter' not in st.session_state:
             st.session_state['main_cat_filter'] = "All Categories"
         
         # Callback to update filter_cat_id BEFORE restart
