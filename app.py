@@ -542,10 +542,18 @@ def _dark_scrollbar_css() -> str:
     [role="listbox"]::-webkit-scrollbar-thumb:hover { background: #4F5380 !important; }
     [data-baseweb="popover"] ul,
     [data-baseweb="popover"] div[style*="overflow"],
-    [data-baseweb="menu"], [role="listbox"] {
+    [data-baseweb="menu"], [role="listbox"] {{
         scrollbar-color: #3D4160 #1E2130 !important;
         scrollbar-width: thin !important;
-    }
+    }}
+    /* ── Smooth page transition animation ── */
+    @keyframes pageFadeSlideIn {{
+        0%   {{ opacity: 0; transform: translateY(12px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .page-transition {{
+        animation: pageFadeSlideIn 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+    }}
     """
 
 # ─── Restore session BEFORE theme init so saved theme is available ──
@@ -630,6 +638,28 @@ elif current_page == 'timer':
     render_timer_page()
 elif current_page == 'analytics':
     render_analytics_page()
+
+# Inject a tiny JS snippet that replays the fade-slide animation on the main
+# content area every time the page key changes. The `data-page` attribute on a
+# hidden sentinel div lets the script detect page switches across reruns.
+import streamlit.components.v1 as _components
+_components.html(
+    f"""
+    <div id="_page_sentinel" data-page="{current_page}" style="display:none"></div>
+    <script>
+    (function() {{
+        const main = window.parent.document.querySelector('[data-testid="stMainBlockContainer"]')
+                  || window.parent.document.querySelector('.main .block-container');
+        if (!main) return;
+        // Remove then re-add the class to replay the animation
+        main.classList.remove('page-transition');
+        void main.offsetWidth;          // force reflow
+        main.classList.add('page-transition');
+    }})();
+    </script>
+    """,
+    height=0,
+)
 
 # ─── Sidebar Footer (Refresh / Logout) ───────────────────────
 with st.sidebar:
