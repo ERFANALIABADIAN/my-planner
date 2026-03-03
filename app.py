@@ -161,14 +161,29 @@ def _build_theme_css(theme: str) -> str:
     .stMarkdown p, .stMarkdown span {{ color: {_text}; }}
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] {{
+        background-color: {_surface2} !important;
+        background: {_surface2} !important;
+        border: 1px solid {_border} !important;
+        border-radius: 10px !important;
+        padding: 0.3rem !important;
+        transition: all 0.2s ease;
+    }}
+    [data-testid="stSidebarCollapseButton"]:hover,
+    [data-testid="collapsedControl"]:hover {{
+        background-color: {_accent} !important;
+        background: {_accent} !important;
+        border-color: {_accent} !important;
+    }}
     [data-testid="stSidebarCollapseButton"] svg,
     [data-testid="collapsedControl"] svg {{
-        width: 1.5rem !important; height: 1.5rem !important;
-        color: {_muted} !important; transition: all 0.2s ease;
+        width: 1.3rem !important; height: 1.3rem !important;
+        color: {_text} !important; transition: all 0.2s ease;
     }}
     [data-testid="stSidebarCollapseButton"]:hover svg,
     [data-testid="collapsedControl"]:hover svg {{
-        color: {_accent} !important; transform: scale(1.1);
+        color: #FFFFFF !important; transform: scale(1.1);
     }}
     section[data-testid="stSidebar"] {{
         background-color: {_sidebar} !important;
