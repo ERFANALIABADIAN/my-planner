@@ -325,6 +325,12 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                 st.rerun()
 
 
+def _save_log_time_cb(task_id: int):
+    """Callback run by note text_input on_change (Enter key).
+    Stores a pending flag so the outer render performs the DB insert + rerun."""
+    st.session_state[f'_pending_log_save_{task_id}'] = True
+
+
 def _render_log_time_section(user_id, task_id, task_title):
     """Log Time panel helper (called within task fragment)."""
     _log_key = f'log_open_{task_id}'
@@ -369,7 +375,8 @@ def _render_log_time_section(user_id, task_id, task_title):
                 log_note = st.text_input(
                     "Note", placeholder="What did you work on?",
                     value=st.session_state[f'_log_note_local_{task_id}'],
-                    key=f"log_note_input_{task_id}", label_visibility="collapsed"
+                    key=f"log_note_input_{task_id}", label_visibility="collapsed",
+                    on_change=_save_log_time_cb, args=(task_id,)
                 )
                 st.session_state[f'_log_note_local_{task_id}'] = log_note
             with col_add:
@@ -402,6 +409,33 @@ def _render_log_time_section(user_id, task_id, task_title):
                         f"✅ Logged {_fmt_min_no_secs(minutes)} for '{task_title}'"
                     )
                     st.rerun() # Ensure UI reflects saved data immediately
+
+            # Handle Enter-to-save from the note text_input on_change callback
+            pending_log_key = f'_pending_log_save_{task_id}'
+            if st.session_state.get(pending_log_key):
+                st.session_state.pop(pending_log_key, None)
+                minutes = st.session_state[f'_log_min_local_{task_id}']
+                db.add_time_log(
+                    user_id, task_id, minutes,
+                    st.session_state[f'_log_date_local_{task_id}'].isoformat(),
+                    st.session_state[f'_log_note_local_{task_id}'], "manual"
+                )
+                st.session_state[_log_key] = False
+                st.session_state[f'_log_min_local_{task_id}'] = 25
+                st.session_state[f'_log_date_local_{task_id}'] = date.today()
+                st.session_state[f'_log_note_local_{task_id}'] = ""
+                def _fmt_min_enter(m):
+                    try:
+                        total_min = int(round(float(m)))
+                    except Exception:
+                        total_min = int(m)
+                    hrs = total_min // 60
+                    mins = total_min % 60
+                    return f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
+                st.session_state[f'_pending_log_toast_{task_id}'] = (
+                    f"✅ Logged {_fmt_min_enter(minutes)} for '{task_title}'"
+                )
+                st.rerun()
 
         
 
