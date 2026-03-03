@@ -272,25 +272,20 @@ def render_timer_page():
     _confirm_box = st.container()
 
     with _confirm_box:
-        # Scroll-to-top trigger — unique key forces iframe re-creation each time
-        _want_scroll = st.session_state.pop('_scroll_to_top', False)
-        _scroll_counter = st.session_state.get('_scroll_ctr', 0)
-        if _want_scroll:
-            _scroll_counter += 1
-            st.session_state['_scroll_ctr'] = _scroll_counter
-            components.html(
-                '<script>'
-                'var w=window.parent,d=w.document;'
-                'function go(){'
-                'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
-                'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
-                'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
-                '}'
-                'go();setTimeout(go,50);setTimeout(go,200);'
-                '</script>',
-                height=0,
-                key=f"__timer_scroll_top_{_scroll_counter}__"
-            )
+        # Scroll-to-top trigger
+        _do_scroll = "true" if st.session_state.pop('_scroll_to_top', False) else "false"
+        components.html(
+            f'<script>if({_do_scroll}){{'
+            'var w=window.parent,d=w.document;'
+            'function go(){'
+            'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
+            'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
+            'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
+            '}'
+            'go();setTimeout(go,50);setTimeout(go,200);'
+            '}</script>',
+            height=0
+        )
 
         # Delete confirmation UI (rendered INSIDE the permanent container)
         if st.session_state.get('confirm_delete'):
