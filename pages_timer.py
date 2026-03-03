@@ -270,8 +270,18 @@ def render_timer_page():
     # ─── Scroll-to-top trigger (delete confirmation) ─────────────────────────
     if st.session_state.pop('_scroll_to_top', False):
         components.html(
-            '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"smooth"});</script>',
-            height=0
+            '<script>'
+            '(function(){'
+            'var w=window.parent,d=w.document;'
+            'function go(){'
+            'w.scrollTo(0,0);'
+            '["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stMain\\"]","section.main",".main","body"]'
+            '.forEach(function(s){var el=d.querySelector(s);if(el){el.scrollTop=0;el.scrollTo(0,0);}});'
+            '}'
+            'go();setTimeout(go,80);setTimeout(go,250);'
+            '})();'
+            '</script>',
+            height=1
         )
 
     # If a delete confirmation was requested elsewhere, show a modal here
