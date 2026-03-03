@@ -411,14 +411,20 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 if st.button("25 min", use_container_width=True,
                              type="primary" if st.session_state.get('pomodoro_minutes', 25) == 25 else "secondary"):
                     st.session_state['pomodoro_minutes'] = 25
+                    st.session_state['custom_pomodoro_minutes'] = 25
+                    st.rerun()
             with preset_col2:
                 if st.button("45 min", use_container_width=True,
                              type="primary" if st.session_state.get('pomodoro_minutes') == 45 else "secondary"):
                     st.session_state['pomodoro_minutes'] = 45
+                    st.session_state['custom_pomodoro_minutes'] = 45
+                    st.rerun()
             with preset_col3:
                 if st.button("60 min", use_container_width=True,
                              type="primary" if st.session_state.get('pomodoro_minutes') == 60 else "secondary"):
                     st.session_state['pomodoro_minutes'] = 60
+                    st.session_state['custom_pomodoro_minutes'] = 60
+                    st.rerun()
 
             # Use a separate key for the number input to avoid session/theme issues
             if 'custom_pomodoro_minutes' not in st.session_state:
