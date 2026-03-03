@@ -609,7 +609,6 @@ with st.sidebar:
         btn_type = "primary" if st.session_state.get('current_page', 'tasks') == page_key else "secondary"
         if st.button(label, key=f"nav_{page_key}", use_container_width=True, type=btn_type):
             st.session_state['current_page'] = page_key
-            st.session_state['_scroll_to_top'] = True
             st.rerun()
 
     # Smaller separator before content
@@ -618,26 +617,6 @@ with st.sidebar:
     # Render the categories area (kept consistent across pages)
     render_sidebar(st.session_state['user_id'])
 
-
-# ─── Scroll to top on category / page switch ─────────────────
-if st.session_state.pop('_scroll_to_top', False):
-    import time
-    st.markdown(
-        f"""<img src="dummy_{time.time()}" onerror="
-            const scroll = () => {{
-                const d = window.parent ? window.parent.document : document;
-                const els = d.querySelectorAll('.main, section.main, [data-testid=stAppViewContainer], [data-testid=stMain]');
-                els.forEach(e => {{ e.scrollTop = 0; e.scrollTo({{top: 0, behavior: 'instant'}}); }});
-                d.documentElement.scrollTop = 0;
-                d.body.scrollTop = 0;
-            }};
-            scroll();
-            setTimeout(scroll, 50);
-            setTimeout(scroll, 250);
-            setTimeout(scroll, 600);
-        " style="display:none;">""",
-        unsafe_allow_html=True,
-    )
 
 # ─── Page Router ──────────────────────────────────────────────
 current_page = st.session_state.get('current_page', 'tasks')
