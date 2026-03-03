@@ -170,8 +170,21 @@ def _build_theme_css(theme: str) -> str:
         padding: 0.3rem !important;
         transition: all 0.2s ease;
     }}
+    [data-testid="collapsedControl"] > div,
+    [data-testid="collapsedControl"] > button,
+    [data-testid="collapsedControl"] button {{
+        background-color: {_surface2} !important;
+        background: {_surface2} !important;
+        border: 1px solid {_border} !important;
+        border-radius: 10px !important;
+        padding: 0.3rem !important;
+        transition: all 0.2s ease;
+    }}
     [data-testid="stSidebarCollapseButton"]:hover,
-    [data-testid="collapsedControl"]:hover {{
+    [data-testid="collapsedControl"]:hover,
+    [data-testid="collapsedControl"]:hover > div,
+    [data-testid="collapsedControl"]:hover > button,
+    [data-testid="collapsedControl"]:hover button {{
         background-color: {_accent} !important;
         background: {_accent} !important;
         border-color: {_accent} !important;
