@@ -341,10 +341,12 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                             )
                             selected_subtask_id = sub_options[selected_sub_label]
             else:
-                # Category has no tasks – allow starting (will save as Freestyle)
-                st.info("No active tasks in this category. Timer will log as ‘Freestyle’.")
+                # Category has no tasks – allow starting under this category
+                st.info("No active tasks in this category. Timer will log under this category.")
                 _can_start = True
-                _is_freestyle = True
+                # _is_freestyle stays False; we'll create a task under this category at start time
+                st.session_state['_timer_empty_cat_id'] = selected_cat_id
+                st.session_state['_timer_empty_cat_label'] = selected_cat_label
 
         st.markdown("---")
         st.markdown("### ⏰ Timer Mode")
@@ -455,10 +457,18 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 _, col_center, _ = st.columns([1, 2, 1])
                 with col_center:
                     if st.button("Start", use_container_width=True, type="primary", disabled=not _can_start):
-                        # Resolve task_id: use selected task, or freestyle
+                        # Resolve task_id
                         _start_task_id = selected_task_id
-                        if _is_freestyle or _start_task_id is None:
-                            _start_task_id = db.get_or_create_freestyle_task(user_id)
+                        if _start_task_id is None:
+                            _empty_cat = st.session_state.get('_timer_empty_cat_id')
+                            if _empty_cat and not _is_freestyle:
+                                # Category exists but has no tasks → create a task under it
+                                _start_task_id = db.create_task(
+                                    user_id, _empty_cat, "Timer Session",
+                                    description="Auto-created for timer sessions"
+                                )
+                            else:
+                                _start_task_id = db.get_or_create_freestyle_task(user_id)
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = _start_task_id
@@ -610,11 +620,13 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                     subtask_badge = f" <small style='color:#60A5FA;'>↳ {log['subtask_title']}</small>"
                 _task_title = log['task_title'] or 'Freestyle'
                 _cat_name = log['category_name'] or ''
+                _cat_icon = log.get('category_icon', '')
                 if _cat_name == '__freestyle__':
                     _cat_name = 'Freestyle'
-                    _task_title = '🎯 Freestyle'
+                    _task_title = 'Freestyle'
+                    _cat_icon = '🎯'
                 st.markdown(
-                    f"{log['category_icon']} **{_task_title}**{subtask_badge} "
+                    f"{_cat_icon} **{_task_title}**{subtask_badge} "
                     f"<small style='color:#6B7280;'>({_cat_name})</small>",
                     unsafe_allow_html=True
                 )
