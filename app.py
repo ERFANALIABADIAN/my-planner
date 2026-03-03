@@ -300,6 +300,19 @@ def _build_theme_css(theme: str) -> str:
         border: none !important; padding: 0 !important;
         background: transparent !important;
     }}
+    [data-testid="stFormSubmitButton"] {{
+        background: transparent !important;
+    }}
+    [data-testid="stFormSubmitButton"] > button {{
+        background-color: {_surface2} !important;
+        color: {_text} !important;
+        border: 1px solid {_border} !important;
+        border-radius: 8px;
+    }}
+    [data-testid="stFormSubmitButton"] > button:hover {{
+        background-color: {_accent} !important;
+        color: #FFFFFF !important;
+    }}
     .stProgress > div > div > div {{ border-radius: 999px; }}
     hr {{ border: none; border-top: 1px solid {_border}; margin: 0.25rem 0; }}
     @media (max-width: 768px) {{

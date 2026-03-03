@@ -11,6 +11,7 @@ import database as db
 # Helper to request confirmation before deleting items (local to timer page)
 def request_delete(kind: str, obj_id: int, name: str = None):
     st.session_state['confirm_delete'] = {'kind': kind, 'id': obj_id, 'name': name}
+    st.session_state['_scroll_to_top'] = True
     st.rerun()
 
 # Keep the session alive every 3 minutes when the timer is running.
@@ -266,6 +267,13 @@ def render_timer_page():
             st.session_state['timer_subtask_select'] = correct_sub_label
 
     # Render the interactive timer dashboard as a fragment for high performance
+    # ─── Scroll-to-top trigger (delete confirmation) ─────────────────────────
+    if st.session_state.pop('_scroll_to_top', False):
+        st.markdown(
+            '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"smooth"});</script>',
+            unsafe_allow_html=True
+        )
+
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
         cd = st.session_state['confirm_delete']

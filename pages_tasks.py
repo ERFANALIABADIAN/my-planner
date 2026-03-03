@@ -10,6 +10,7 @@ import time
 # Helper to request confirmation before deleting items
 def request_delete(kind: str, obj_id: int, name: str = None):
     st.session_state['confirm_delete'] = {'kind': kind, 'id': obj_id, 'name': name}
+    st.session_state['_scroll_to_top'] = True
     st.rerun()
 # ─── Icon picker options ────────────────────────────────────────────
 ICONS = [
@@ -590,6 +591,13 @@ def render_tasks_page():
         st.session_state['add_task_open'] = False
         st.session_state['_tasks_initialized'] = True
     
+    # ─── Scroll-to-top trigger (delete confirmation or category change) ────
+    if st.session_state.pop('_scroll_to_top', False):
+        st.markdown(
+            '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"smooth"});</script>',
+            unsafe_allow_html=True
+        )
+
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
         cd = st.session_state['confirm_delete']
@@ -711,6 +719,8 @@ def render_tasks_page():
             for _k in list(st.session_state.keys()):
                 if _k.startswith('sub_open_') or _k.startswith('log_open_') or _k.startswith('completed_sub_open_'):
                     st.session_state[_k] = False
+            # Scroll to top when category changes
+            st.session_state['_scroll_to_top'] = True
 
         selected_cat_name = st.selectbox(
             "Filter by Category",
