@@ -42,12 +42,21 @@ def _build_theme_css(theme: str) -> str:
         _input = "#FFFFFF"
 
     return f"""<style>
+    /* ── Smooth fade-in animation to prevent flash on rerun ── */
+    @keyframes _smoothFadeIn {{
+        from {{ opacity: 0; }}
+        to   {{ opacity: 1; }}
+    }}
     /* ── Override Streamlit CSS custom properties for theme ── */
     :root, .stApp {{
         --background-color: {_bg};
         --secondary-background-color: {_surface};
         --text-color: {_text};
         --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }}
+    /* ── Anchor background on html so it never flashes white ── */
+    html {{
+        background-color: {_bg} !important;
     }}
     /* ── Global background fix: eliminate ALL white backgrounds ── */
     .stApp {{
@@ -56,7 +65,11 @@ def _build_theme_css(theme: str) -> str:
         color: {_text} !important;
         transition: background-color 0.3s ease, color 0.3s ease;
     }}
-    .main .block-container {{ background-color: {_bg} !important; padding-top:0.4rem; }}
+    .main .block-container {{
+        background-color: {_bg} !important;
+        padding-top:0.4rem;
+        animation: _smoothFadeIn 0.25s ease-out;
+    }}
     /* Nuclear: force every structural Streamlit container to match theme */
     [data-testid="stAppViewContainer"],
     [data-testid="stAppViewContainer"] > div,
@@ -73,6 +86,17 @@ def _build_theme_css(theme: str) -> str:
         background-color: {_bg} !important;
         background: {_bg} !important;
     }}
+    /* Smooth transitions on structural containers */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    section.main {{
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }}
+    /* Fade-in for main content blocks so page changes don't blink */
+    [data-testid="stMainBlockContainer"] {{
+        animation: _smoothFadeIn 0.25s ease-out;
+    }}
     /* Header / toolbar - often white by default */
     [data-testid="stHeader"],
     [data-testid="stToolbar"],
@@ -80,6 +104,7 @@ def _build_theme_css(theme: str) -> str:
     header[data-testid="stHeader"] {{
         background-color: {_bg} !important;
         background: {_bg} !important;
+        transition: background-color 0.3s ease;
     }}
     /* Bottom container */
     [data-testid="stBottom"],
@@ -93,6 +118,7 @@ def _build_theme_css(theme: str) -> str:
     [data-testid="stSidebarContent"] > div {{
         background-color: {_sidebar} !important;
         background: {_sidebar} !important;
+        transition: background-color 0.3s ease;
     }}
     /* Dialog / Modal */
     [data-testid="stDialog"],
@@ -173,6 +199,11 @@ def _build_theme_css(theme: str) -> str:
     section[data-testid="stSidebar"] {{
         background-color: {_sidebar} !important;
         border-right: 1px solid {_border} !important;
+        transition: background-color 0.3s ease;
+    }}
+    /* Sidebar content fade-in */
+    [data-testid="stSidebarUserContent"] {{
+        animation: _smoothFadeIn 0.2s ease-out;
     }}
     [data-testid="stSidebar"] * {{ color: {_text} !important; }}
     [data-testid="stSidebar"] .stMarkdown h3 {{
@@ -182,6 +213,7 @@ def _build_theme_css(theme: str) -> str:
         background-color: {_surface} !important;
         border: 1px solid {_border} !important;
         border-radius: 12px; margin-bottom: 0.25rem; color: {_text} !important;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
     }}
     [data-testid="stExpander"] summary {{
         color: {_head} !important;
@@ -293,6 +325,7 @@ def _build_theme_css(theme: str) -> str:
     [data-testid="stMetric"] {{
         background: {_surface} !important; padding: 0.6rem;
         border-radius: 12px; border: 1px solid {_border};
+        transition: background-color 0.3s ease, border-color 0.3s ease;
     }}
     [data-testid="stMetricLabel"] {{ font-size: 0.8rem !important; color: {_muted} !important; }}
     [data-testid="stMetricValue"] {{ font-size: 1.5rem !important; font-weight: 700 !important; color: {_head} !important; }}
@@ -319,7 +352,7 @@ def _build_theme_css(theme: str) -> str:
         .stColumns {{ flex-direction: column; }}
         [data-testid="stMetricValue"] {{ font-size: 1.2rem !important; }}
     }}
-    html {{ scroll-behavior: smooth; }}
+    html {{ scroll-behavior: smooth; background-color: {_bg} !important; }}
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
     .stNumberInput > div > div > input {{

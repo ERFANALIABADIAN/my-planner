@@ -278,9 +278,9 @@ def render_timer_page():
             f'<script>if({_do_scroll}){{'
             'var w=window.parent,d=w.document;'
             'function go(){'
-            'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
+            'w.scrollTo({top:0,behavior:"smooth"});'
             'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
-            'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
+            'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTo({top:0,behavior:"smooth"});}}catch(e){}});'
             '}'
             'go();setTimeout(go,50);setTimeout(go,200);'
             '}</script>',
