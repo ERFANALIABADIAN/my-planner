@@ -267,84 +267,53 @@ def render_timer_page():
             st.session_state['timer_subtask_select'] = correct_sub_label
 
     # Render the interactive timer dashboard as a fragment for high performance
-    # ─── Scroll-to-top trigger (delete confirmation) ─────────────────────────
-    # Always render so the widget tree stays stable
-    _do_scroll = "true" if st.session_state.pop('_scroll_to_top', False) else "false"
-    components.html(
-        f'<script>if({_do_scroll}){{'
-        'var w=window.parent,d=w.document;'
-        'function go(){'
-        'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
-        'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
-        'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
-        '}'
-        'go();setTimeout(go,50);setTimeout(go,200);'
-        '}</script>',
-        height=0
-    )
+    # ─── Permanent container for confirm-delete + scroll-to-top ────────────
+    # ALWAYS create this container so the widget tree below stays stable
+    _confirm_box = st.container()
 
-    # If a delete confirmation was requested elsewhere, show a modal here
-    if st.session_state.get('confirm_delete'):
-        cd = st.session_state['confirm_delete']
-        modal_shown = False
-        if hasattr(st, 'modal'):
-            try:
-                with st.modal("Confirm Deletion"):
-                    modal_shown = True
-                    kind = cd.get('kind')
-                    name = cd.get('name') or ''
-                    st.markdown(f"Are you sure you want to delete **{kind}**: **{name}**? This action cannot be undone.")
-                    col_yes, col_no = st.columns([1, 1])
-                    with col_yes:
-                        if st.button("Yes, delete", key="__timer_confirm_delete_yes__", type="primary"):
-                            try:
-                                if kind == 'timelog':
-                                    db.delete_time_log(cd['id'])
-                                    st.session_state['_today_logs_stale'] = True
-                                elif kind == 'task':
-                                    db.delete_task(cd['id'])
-                                elif kind == 'subtask':
-                                    db.delete_subtask(cd['id'])
-                                elif kind == 'category':
-                                    db.delete_category(cd['id'])
-                            finally:
-                                st.session_state.pop('confirm_delete', None)
-                                st.rerun()
-                    with col_no:
-                        if st.button("Cancel", key="__timer_confirm_delete_cancel__"):
-                            st.session_state.pop('confirm_delete', None)
-                            st.rerun()
-            except Exception:
-                modal_shown = False
+    with _confirm_box:
+        # Scroll-to-top trigger
+        _do_scroll = "true" if st.session_state.pop('_scroll_to_top', False) else "false"
+        components.html(
+            f'<script>if({_do_scroll}){{'
+            'var w=window.parent,d=w.document;'
+            'function go(){'
+            'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
+            'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
+            'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
+            '}'
+            'go();setTimeout(go,50);setTimeout(go,200);'
+            '}</script>',
+            height=0
+        )
 
-        # Fallback inline confirmation if modal isn't supported
-        if not modal_shown:
-            box = st.container()
-            with box:
-                kind = cd.get('kind')
-                name = cd.get('name') or ''
-                st.markdown(f"### Confirm delete: {kind} — {name}")
-                st.markdown("This action cannot be undone.")
-                col_yes, col_no = st.columns([1, 1])
-                with col_yes:
-                    if st.button("Yes, delete", key="__timer_confirm_delete_yes_fb__", type="primary"):
-                        try:
-                            if kind == 'timelog':
-                                db.delete_time_log(cd['id'])
-                                st.session_state['_today_logs_stale'] = True
-                            elif kind == 'task':
-                                db.delete_task(cd['id'])
-                            elif kind == 'subtask':
-                                db.delete_subtask(cd['id'])
-                            elif kind == 'category':
-                                db.delete_category(cd['id'])
-                        finally:
-                            st.session_state.pop('confirm_delete', None)
-                            st.rerun()
-                with col_no:
-                    if st.button("Cancel", key="__timer_confirm_delete_cancel_fb__"):
+        # Delete confirmation UI (rendered INSIDE the permanent container)
+        if st.session_state.get('confirm_delete'):
+            cd = st.session_state['confirm_delete']
+            kind = cd.get('kind')
+            name = cd.get('name') or ''
+            st.markdown(f"### Confirm delete: {kind} — {name}")
+            st.markdown("This action cannot be undone.")
+            col_yes, col_no = st.columns([1, 1])
+            with col_yes:
+                if st.button("Yes, delete", key="__timer_confirm_delete_yes__", type="primary"):
+                    try:
+                        if kind == 'timelog':
+                            db.delete_time_log(cd['id'])
+                            st.session_state['_today_logs_stale'] = True
+                        elif kind == 'task':
+                            db.delete_task(cd['id'])
+                        elif kind == 'subtask':
+                            db.delete_subtask(cd['id'])
+                        elif kind == 'category':
+                            db.delete_category(cd['id'])
+                    finally:
                         st.session_state.pop('confirm_delete', None)
                         st.rerun()
+            with col_no:
+                if st.button("Cancel", key="__timer_confirm_delete_cancel__"):
+                    st.session_state.pop('confirm_delete', None)
+                    st.rerun()
 
     _render_timer_dashboard(user_id, tasks, task_options, categories)
 
