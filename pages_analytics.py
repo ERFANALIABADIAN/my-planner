@@ -28,6 +28,7 @@ def format_minutes(minutes: float) -> str:
 def render_analytics_page():
     # Ensure Tasks page will reset its panels when user navigates back
     st.session_state['_tasks_initialized'] = False
+    st.session_state['_timer_page_inited'] = False  # refresh timer caches on return
     user_id = st.session_state['user_id']
 
     # Track page visits: when the user arrives at Analytics (from another page),

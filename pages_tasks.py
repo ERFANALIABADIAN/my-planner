@@ -582,6 +582,7 @@ def render_tasks_page():
             st.session_state.pop(k, None)
     # If we're entering the Tasks page from another page, reset any open panels
     if not st.session_state.get('_tasks_initialized', False):
+        st.session_state['_timer_page_inited'] = False  # refresh timer caches on return
         for k in list(st.session_state.keys()):
             if k.startswith('sub_open_') or k.startswith('log_open_'):
                 st.session_state[k] = False

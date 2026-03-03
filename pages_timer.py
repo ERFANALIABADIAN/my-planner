@@ -178,8 +178,18 @@ def render_timer_page():
     # Ensure Tasks page will reset its panels when user navigates back
     st.session_state['_tasks_initialized'] = False
     user_id = st.session_state['user_id']
-    categories = db.get_categories(user_id)
-    tasks = db.get_tasks(user_id, status='active')
+
+    # Cache categories & tasks within timer page (refreshed on page navigation)
+    _timer_init = st.session_state.get('_timer_page_inited')
+    if not _timer_init:
+        categories = db.get_categories(user_id)
+        tasks = db.get_tasks(user_id, status='active')
+        st.session_state['_timer_categories'] = categories
+        st.session_state['_timer_tasks'] = tasks
+        st.session_state['_timer_page_inited'] = True
+    else:
+        categories = st.session_state['_timer_categories']
+        tasks = st.session_state['_timer_tasks']
 
     st.markdown("## ⏱ Focus Timer")
 
@@ -199,7 +209,11 @@ def render_timer_page():
         st.session_state['timer_paused_elapsed'] = 0
 
     # ─── Load + sync from DB (must run before columns so selectbox is correct) ──
-    active_timer_db = db.get_active_timer(user_id)
+    # Skip the DB call entirely if we've already synced this session
+    if not st.session_state.get('db_synced'):
+        active_timer_db = db.get_active_timer(user_id)
+    else:
+        active_timer_db = None
     if active_timer_db and not st.session_state.get('db_synced'):
         db_running = bool(active_timer_db['is_running'])
         db_start = (datetime.fromisoformat(active_timer_db['start_time'])
@@ -218,12 +232,14 @@ def render_timer_page():
     active_task_id = st.session_state.get('timer_task_id')
     if active_task_id and (st.session_state['timer_running']
                            or st.session_state.get('timer_paused_elapsed', 0) > 0):
-        # Check if this is a freestyle session
-        _freestyle_task_id = None
-        try:
-            _freestyle_task_id = db.get_or_create_freestyle_task(user_id)
-        except Exception:
-            pass
+        # Check if this is a freestyle session (cached to avoid DB query every render)
+        _freestyle_task_id = st.session_state.get('_cached_freestyle_task_id')
+        if _freestyle_task_id is None:
+            try:
+                _freestyle_task_id = db.get_or_create_freestyle_task(user_id)
+                st.session_state['_cached_freestyle_task_id'] = _freestyle_task_id
+            except Exception:
+                pass
         if active_task_id == _freestyle_task_id:
             # Freestyle session – keep category at default placeholder
             st.session_state['timer_category_select'] = '— Freestyle (no task) —'
@@ -239,9 +255,9 @@ def render_timer_page():
                 correct_task_label = f"{active_task['category_icon']} {active_task['title']}"
                 st.session_state['timer_task_select'] = correct_task_label
 
-    # ─── Sync subtask selectbox ───────────────────────────────────────────────
+    # ─── Sync subtask selectbox (skip DB call if already synced) ──────────────
     active_subtask_id = st.session_state.get('timer_subtask_id')
-    if active_task_id and active_subtask_id:
+    if active_task_id and active_subtask_id and 'timer_subtask_select' not in st.session_state:
         _active_subs = db.get_subtasks(active_task_id)
         correct_sub_label = next(
             (s['title'] for s in _active_subs if s['id'] == active_subtask_id), None
@@ -267,6 +283,7 @@ def render_timer_page():
                             try:
                                 if kind == 'timelog':
                                     db.delete_time_log(cd['id'])
+                                    st.session_state['_today_logs_stale'] = True
                                 elif kind == 'task':
                                     db.delete_task(cd['id'])
                                 elif kind == 'subtask':
@@ -297,6 +314,7 @@ def render_timer_page():
                         try:
                             if kind == 'timelog':
                                 db.delete_time_log(cd['id'])
+                                st.session_state['_today_logs_stale'] = True
                             elif kind == 'task':
                                 db.delete_task(cd['id'])
                             elif kind == 'subtask':
@@ -382,8 +400,11 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 selected_task_id = cat_task_options[selected_task_label]
 
                 if selected_task_id is not None:
-                    # Step 3: Subtask selection (only shown when a task is selected)
-                    subtasks = db.get_subtasks(selected_task_id)
+                    # Step 3: Subtask selection (cached per task to avoid DB hit every render)
+                    _cached_key = f'_timer_subtasks_{selected_task_id}'
+                    if _cached_key not in st.session_state:
+                        st.session_state[_cached_key] = db.get_subtasks(selected_task_id)
+                    subtasks = st.session_state[_cached_key]
                     if subtasks:
                         undone_subtasks = [s for s in subtasks if not s['is_done']]
                         if undone_subtasks:
@@ -647,7 +668,8 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
             t_str = f"{hrs}h {ms}m {ss}s" if hrs > 0 else (f"{ms}m {ss}s" if ms > 0 else f"{ss}s")
             st.toast(f"✅ Saved {t_str}!", icon="⏱️")
 
-            # FULL RERUN to update the Today's Sessions list below the fragment
+            # Invalidate today's sessions cache & rerun
+            st.session_state['_today_logs_stale'] = True
             st.rerun()
 
 
@@ -657,8 +679,12 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
     st.markdown("---")
     st.markdown("### 📊 Today's Sessions")
 
-    today_logs = db.get_time_logs(user_id, start_date=date.today().isoformat(),
-                                  end_date=date.today().isoformat())
+    today_logs = st.session_state.get('_cached_today_logs')
+    if today_logs is None or st.session_state.get('_today_logs_stale'):
+        today_logs = db.get_time_logs(user_id, start_date=date.today().isoformat(),
+                                      end_date=date.today().isoformat())
+        st.session_state['_cached_today_logs'] = today_logs
+        st.session_state.pop('_today_logs_stale', None)
     if today_logs:
         total_today_minutes = sum(log['duration_minutes'] for log in today_logs)
         total_seconds = int(total_today_minutes * 60)
