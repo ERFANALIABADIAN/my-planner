@@ -356,9 +356,16 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
         _can_start = _is_freestyle  # Freestyle can always start
 
         if selected_cat_id is not None:
+            # A real category is selected → can always start (even without a task)
+            _can_start = True
+            # Store category id for empty-cat / no-task-selected start
+            st.session_state['_timer_empty_cat_id'] = selected_cat_id
+            st.session_state['_timer_empty_cat_label'] = selected_cat_label
+
             # Filter tasks for the selected category (exclude __freestyle__ tasks)
             cat_tasks = [t for t in tasks if t['category_id'] == selected_cat_id]
             if cat_tasks:
+                # Only show the task selectbox when there are tasks
                 cat_task_options = {"— Select a task —": None}
                 for t in cat_tasks:
                     label = f"{t['category_icon']} {t['title']}"
@@ -372,8 +379,6 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 selected_task_id = cat_task_options[selected_task_label]
 
                 if selected_task_id is not None:
-                    _can_start = True  # Valid task selected
-
                     # Step 3: Subtask selection (only shown when a task is selected)
                     subtasks = db.get_subtasks(selected_task_id)
                     if subtasks:
@@ -388,12 +393,6 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                                 key="timer_subtask_select"
                             )
                             selected_subtask_id = sub_options[selected_sub_label]
-            else:
-                # Category has no tasks – allow starting under this category
-                _can_start = True
-                # _is_freestyle stays False; we'll create a task under this category at start time
-                st.session_state['_timer_empty_cat_id'] = selected_cat_id
-                st.session_state['_timer_empty_cat_label'] = selected_cat_label
 
         st.markdown("---")
         st.markdown("### ⏰ Timer Mode")
@@ -521,11 +520,8 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                         if _start_task_id is None:
                             _empty_cat = st.session_state.get('_timer_empty_cat_id')
                             if _empty_cat and not _is_freestyle:
-                                # Category exists but has no tasks → create a task under it
-                                _start_task_id = db.create_task(
-                                    user_id, _empty_cat, "Timer Session",
-                                    description="Auto-created for timer sessions"
-                                )
+                                # Category selected but no task chosen → reuse/create a Timer Session task
+                                _start_task_id = db.get_or_create_category_timer_task(user_id, _empty_cat)
                             else:
                                 _start_task_id = db.get_or_create_freestyle_task(user_id)
                         st.session_state['timer_running'] = True

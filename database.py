@@ -539,6 +539,21 @@ def get_or_create_freestyle_task(user_id: int) -> int:
     return task_id
 
 
+def get_or_create_category_timer_task(user_id: int, category_id: int) -> int:
+    """Return (or create) a reusable 'Timer Session' task under the given category."""
+    row = _query(
+        "SELECT id FROM tasks WHERE user_id = ? AND category_id = ? AND title = 'Timer Session'",
+        [user_id, category_id], fetch="one"
+    )
+    if row:
+        return row['id'] if isinstance(row, dict) else row[0]
+    return _query(
+        "INSERT INTO tasks (user_id, category_id, title, description, status) "
+        "VALUES (?, ?, 'Timer Session', 'Auto-created for timer sessions', 'active')",
+        [user_id, category_id], fetch="lastrowid"
+    )
+
+
 def update_task(task_id: int, **kwargs):
     if HAS_STREAMLIT:
         get_tasks.clear()
