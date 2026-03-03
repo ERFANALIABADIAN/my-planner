@@ -144,6 +144,7 @@ def render_sidebar(user_id):
                     for _k in list(st.session_state.keys()):
                         if _k.startswith('sub_open_') or _k.startswith('log_open_') or _k.startswith('completed_sub_open_'):
                             st.session_state[_k] = False
+                    st.session_state['_scroll_to_top'] = True
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
@@ -660,6 +661,13 @@ def render_tasks_page():
     """, unsafe_allow_html=True)
 
     # Sidebar rendering is moved to render_sidebar(user_id) so it can be shown on all pages.
+
+    # ─── Scroll to top when switching categories ─────────────
+    if st.session_state.pop('_scroll_to_top', False):
+        components.html(
+            '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"instant"});</script>',
+            height=0,
+        )
 
     # ─── Main Content: Tasks ──────────────────────────────────
     st.markdown("## 📋 My Tasks")

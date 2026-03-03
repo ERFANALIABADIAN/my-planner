@@ -609,6 +609,7 @@ with st.sidebar:
         btn_type = "primary" if st.session_state.get('current_page', 'tasks') == page_key else "secondary"
         if st.button(label, key=f"nav_{page_key}", use_container_width=True, type=btn_type):
             st.session_state['current_page'] = page_key
+            st.session_state['_scroll_to_top'] = True
             st.rerun()
 
     # Smaller separator before content
