@@ -621,13 +621,20 @@ with st.sidebar:
 
 # ─── Scroll to top on category / page switch ─────────────────
 if st.session_state.pop('_scroll_to_top', False):
+    import time
     st.markdown(
-        """<img src="" onerror="
-            const d=window.parent.document;
-            ['section.main','[data-testid=stAppViewContainer]','[data-testid=stMain]']
-            .forEach(s=>{const e=d.querySelector(s);if(e)e.scrollTop=0;});
-            d.documentElement.scrollTop=0;d.body.scrollTop=0;
-            this.remove();
+        f"""<img src="dummy_{time.time()}" onerror="
+            const scroll = () => {{
+                const d = window.parent ? window.parent.document : document;
+                const els = d.querySelectorAll('.main, section.main, [data-testid=stAppViewContainer], [data-testid=stMain]');
+                els.forEach(e => {{ e.scrollTop = 0; e.scrollTo({{top: 0, behavior: 'instant'}}); }});
+                d.documentElement.scrollTop = 0;
+                d.body.scrollTop = 0;
+            }};
+            scroll();
+            setTimeout(scroll, 50);
+            setTimeout(scroll, 250);
+            setTimeout(scroll, 600);
         " style="display:none;">""",
         unsafe_allow_html=True,
     )
