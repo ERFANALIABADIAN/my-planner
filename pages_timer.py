@@ -253,16 +253,6 @@ def render_timer_page():
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
         cd = st.session_state['confirm_delete']
-        # Scroll to top so the confirmation modal is visible without manual scrolling
-        try:
-            components.html(
-                "<div id='confirm-anchor'></div>"
-                "<script>setTimeout(function(){var el=document.getElementById('confirm-anchor');"
-                "if(el){el.scrollIntoView({behavior:'smooth', block:'center'});} }, 200);</script>",
-                height=1,
-            )
-        except Exception:
-            pass
         modal_shown = False
         if hasattr(st, 'modal'):
             try:

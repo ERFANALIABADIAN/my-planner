@@ -3,7 +3,6 @@ Tasks page - Category & Task management with subtasks.
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 from datetime import date
 import database as db
 import time
@@ -593,18 +592,6 @@ def render_tasks_page():
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
         cd = st.session_state['confirm_delete']
-        # Ensure the UI scrolls to top so the modal/confirmation is visible
-        try:
-            # Insert an in-page anchor and scroll to it after a short delay so the
-            # inline confirmation or modal area is visible to the user.
-            components.html(
-                "<div id='confirm-anchor'></div>"
-                "<script>setTimeout(function(){var el=document.getElementById('confirm-anchor');"
-                "if(el){el.scrollIntoView({behavior:'smooth', block:'center'});} }, 200);</script>",
-                height=1,
-            )
-        except Exception:
-            pass
         modal_shown = False
         if hasattr(st, 'modal'):
             try:
