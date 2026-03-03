@@ -210,6 +210,7 @@ def render_timer_page():
         st.session_state['timer_task_id']        = active_timer_db['task_id']
         st.session_state['timer_subtask_id']     = active_timer_db['subtask_id']
         st.session_state['pomodoro_minutes']     = active_timer_db['pomodoro_minutes']
+        st.session_state['_active_timer_mode']   = active_timer_db.get('mode', 'stopwatch')
         st.session_state['db_synced'] = True
 
     # ─── Sync selectbox keys → active task (timer running or paused) ──────
@@ -326,7 +327,19 @@ def render_timer_page():
 @st.fragment
 def _render_timer_dashboard(user_id, tasks, task_options, categories):
     """Fragment-based timer dashboard for snappy UI updates without full page refreshes."""
-    
+
+    # ─── Pomodoro auto-refresh (placed BEFORE layout so it doesn't render a visible box inside columns) ───
+    if _HAS_AUTOREFRESH and st.session_state.get('timer_running'):
+        _pom_mode = st.session_state.get('_active_timer_mode', '')
+        if _pom_mode == 'pomodoro':
+            _pom_total = st.session_state.get('pomodoro_minutes', 25) * 60
+            _pom_elapsed = st.session_state.get('timer_paused_elapsed', 0)
+            if st.session_state.get('timer_start'):
+                _pom_elapsed += (datetime.now() - st.session_state['timer_start']).total_seconds()
+            _pom_remaining = max(0, _pom_total - int(_pom_elapsed))
+            if _pom_remaining > 0:
+                st_autorefresh(interval=int((_pom_remaining + 1.5) * 1000), limit=1, key="pomodoro_auto_save")
+
     # ─── Timer Configuration ──────────────────────────────────
     col_config, col_timer = st.columns([1, 1])
 
@@ -489,13 +502,6 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 mode="pomodoro",
                 total_seconds=total_seconds
             )
-            # Auto-refresh: schedule a single rerun at exactly when pomodoro finishes
-            if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
-                remaining_secs = max(0, total_seconds - elapsed)
-                if remaining_secs > 0:
-                    # Hide the autorefresh iframe (it renders a visible grey box)
-                    st.markdown('<style>iframe[title="streamlit_autorefresh.st_autorefresh"]{display:none;height:0;}</style>', unsafe_allow_html=True)
-                    st_autorefresh(interval=int((remaining_secs + 1.5) * 1000), limit=1, key="pomodoro_auto_save")
         else:
             js_timer_component(
                 elapsed_seconds=elapsed,
@@ -538,6 +544,7 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                         st.session_state['timer_start'] = datetime.now()
                         st.session_state['timer_task_id'] = _start_task_id
                         st.session_state['timer_subtask_id'] = selected_subtask_id
+                        st.session_state['_active_timer_mode'] = mode_str
                         # Save to DB
                         db.save_active_timer(
                             user_id, _start_task_id, 
@@ -641,6 +648,7 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
             st.session_state['timer_start'] = None
             st.session_state['timer_paused_elapsed'] = 0
             st.session_state['timer_elapsed'] = 0
+            st.session_state.pop('_active_timer_mode', None)
 
             # Feedback - include seconds (restore full HH:MM:SS or MM:SS)
             hrs = int(final_elapsed // 3600)
