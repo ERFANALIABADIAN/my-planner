@@ -34,7 +34,7 @@ def _build_theme_css(theme: str) -> str:
         _bg = "#0F1117"; _surface = "#1E2130"; _surface2 = "#252840"
         _border = "#2D3150"; _text = "#374151"; _muted = "#9CA3AF"  # noqa: redefine ok
         _text = "#E5E7EB"; _head = "#FFFFFF"; _accent = "#4F8EF7"
-        _sidebar = "#1E2130"; _input = "#1E2130"
+        _sidebar = "#0F1117"; _input = "#1E2130"
     else:
         _bg = "#F5F7FA"; _surface = "#FFFFFF"; _surface2 = "#F9FAFB"
         _border = "#E5E7EB"; _text = "#374151"; _muted = "#6B7280"
@@ -558,7 +558,7 @@ _dark = (st.session_state['theme'] == 'dark')
 if _dark:
     _bg = "#0F1117"; _surface = "#1E2130"; _surface2 = "#252840"
     _border = "#2D3150"; _text = "#E5E7EB"; _muted = "#9CA3AF"
-    _head = "#FFFFFF"; _accent = "#4F8EF7"; _sidebar = "#151722"
+    _head = "#FFFFFF"; _accent = "#4F8EF7"; _sidebar = "#0F1117"
     _input = "#1E2130"
 else:
     _bg = "#F5F7FA"; _surface = "#FFFFFF"; _surface2 = "#F9FAFB"
