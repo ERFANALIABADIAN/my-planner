@@ -38,15 +38,7 @@ def _subtask_toggle_cb(sub_id: int, task_id: int):
     st.session_state[f'subtask_timer_{task_id}'] = time.time()
 
 
-def _create_subtask_cb(task_id: int, text_widget_key: str, ctr_key: str):
-    """Minimal callback run by `st.text_input(on_change=...)`.
-    Instead of performing DB operations inside the callback (which can cause rerun/no-op issues),
-    store the pending title in session state. The outer render will perform the DB insert and rerun.
-    """
-    pending_key = f"_pending_new_sub_{task_id}"
-    title = st.session_state.get(text_widget_key, "")
-    # Store the pending title (empty string means nothing to do)
-    st.session_state[pending_key] = title
+# _create_subtask_cb removed – subtask add now uses st.form (Enter or button only)
 
 
 
@@ -286,49 +278,26 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
-            # New subtask input: keep the original single-color button and allow Enter
-            # Use a rotating counter in the widget key so we can force a fresh widget instance
+            # New subtask input wrapped in a form so only Enter or button
+            # click triggers save (blur / clicking away does NOT save).
             ctr_key = f'new_sub_ctr_{task_id}'
             if ctr_key not in st.session_state:
                 st.session_state[ctr_key] = 0
             ctr = st.session_state[ctr_key]
-            rotating_key = f"new_sub_{task_id}_{ctr}"
 
-            # Text input triggers on_change (Enter) which calls our callback to create the subtask
-            col_new_sub, col_add_sub = st.columns([5, 1])
-            with col_new_sub:
-                new_sub_title = st.text_input(
-                    "New subtask", placeholder="Add a subtask...",
-                    key=rotating_key, label_visibility="collapsed",
-                    on_change=_create_subtask_cb, args=(task_id, rotating_key, ctr_key)
-                )
-            with col_add_sub:
-                if st.button("➕", key=f"add_sub_{task_id}"):
-                    title = st.session_state.get(rotating_key, "")
-                    if title and title.strip():
-                        db.create_subtask(task_id, title.strip())
-                        # Advance counter so next render creates a new widget instance (cleared)
-                        st.session_state[ctr_key] = ctr + 1
-                        st.rerun()  # Fragment rerun
-
-            # If an Enter event occurred the callback set a pending flag; handle it here
-            pending_key = f"_pending_new_sub_{task_id}"
-            pending_val = st.session_state.get(pending_key)
-            if pending_val and isinstance(pending_val, str) and pending_val.strip():
-                # Create subtask and advance rotating counter so input clears
-                try:
-                    db.create_subtask(task_id, pending_val.strip())
-                except Exception:
-                    pass
-                st.session_state.pop(pending_key, None)
-                st.session_state[ctr_key] = ctr + 1
-                st.rerun()
-
-
-def _save_log_time_cb(task_id: int):
-    """Callback run by note text_input on_change (Enter key).
-    Stores a pending flag so the outer render performs the DB insert + rerun."""
-    st.session_state[f'_pending_log_save_{task_id}'] = True
+            with st.form(f"new_sub_form_{task_id}_{ctr}", clear_on_submit=True, border=False):
+                col_new_sub, col_add_sub = st.columns([5, 1])
+                with col_new_sub:
+                    new_sub_title = st.text_input(
+                        "New subtask", placeholder="Add a subtask...",
+                        key=f"new_sub_{task_id}_{ctr}", label_visibility="collapsed"
+                    )
+                with col_add_sub:
+                    submitted = st.form_submit_button("➕")
+                if submitted and new_sub_title and new_sub_title.strip():
+                    db.create_subtask(task_id, new_sub_title.strip())
+                    st.session_state[ctr_key] = ctr + 1
+                    st.rerun()
 
 
 def _render_log_time_section(user_id, task_id, task_title):
@@ -350,53 +319,35 @@ def _render_log_time_section(user_id, task_id, task_title):
             st.rerun()
 
         if _log_open:
-            # Use local variables for log time fields to avoid rerun issues
-            if f'_log_min_local_{task_id}' not in st.session_state:
-                st.session_state[f'_log_min_local_{task_id}'] = 25
-            if f'_log_date_local_{task_id}' not in st.session_state:
-                st.session_state[f'_log_date_local_{task_id}'] = date.today()
-            if f'_log_note_local_{task_id}' not in st.session_state:
-                st.session_state[f'_log_note_local_{task_id}'] = ""
-
-            col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
-            with col_dur:
-                log_mins = st.number_input(
-                    "Minutes", min_value=1, value=st.session_state[f'_log_min_local_{task_id}'],
-                    key=f"log_min_input_{task_id}", label_visibility="collapsed"
-                )
-                st.session_state[f'_log_min_local_{task_id}'] = log_mins
-            with col_date:
-                log_date = st.date_input(
-                    "Date", value=st.session_state[f'_log_date_local_{task_id}'],
-                    key=f"log_date_input_{task_id}", label_visibility="collapsed"
-                )
-                st.session_state[f'_log_date_local_{task_id}'] = log_date
-            with col_note:
-                log_note = st.text_input(
-                    "Note", placeholder="What did you work on?",
-                    value=st.session_state[f'_log_note_local_{task_id}'],
-                    key=f"log_note_input_{task_id}", label_visibility="collapsed",
-                    on_change=_save_log_time_cb, args=(task_id,)
-                )
-                st.session_state[f'_log_note_local_{task_id}'] = log_note
-            with col_add:
-                # Use tertiary button with inline saving
-                if st.button("💾", key=f"save_log_{task_id}"):
-                    minutes = st.session_state[f'_log_min_local_{task_id}']
-                    db.add_time_log(
-                        user_id, task_id, minutes,
-                        st.session_state[f'_log_date_local_{task_id}'].isoformat(),
-                        st.session_state[f'_log_note_local_{task_id}'], "manual"
+            # Wrapped in a form so only Enter or 💾 click saves
+            # (blur / clicking away / accidental keystrokes do NOT save).
+            with st.form(f"log_time_form_{task_id}", border=False):
+                col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
+                with col_dur:
+                    log_mins = st.number_input(
+                        "Minutes", min_value=1, value=25,
+                        key=f"log_min_input_{task_id}", label_visibility="collapsed"
                     )
-                    # Close panel and show success message
+                with col_date:
+                    log_date = st.date_input(
+                        "Date", value=date.today(),
+                        key=f"log_date_input_{task_id}", label_visibility="collapsed"
+                    )
+                with col_note:
+                    log_note = st.text_input(
+                        "Note", placeholder="What did you work on?",
+                        key=f"log_note_input_{task_id}", label_visibility="collapsed"
+                    )
+                with col_add:
+                    submitted = st.form_submit_button("💾")
+                if submitted:
+                    db.add_time_log(
+                        user_id, task_id, log_mins,
+                        log_date.isoformat(), log_note, "manual"
+                    )
                     st.session_state[_log_key] = False
-                    # Reset local fields
-                    st.session_state[f'_log_min_local_{task_id}'] = 25
-                    st.session_state[f'_log_date_local_{task_id}'] = date.today()
-                    st.session_state[f'_log_note_local_{task_id}'] = ""
-                    # Queue toast to show after rerun so it's always visible (no seconds)
-                    # Format minutes without seconds for cleaner toasts
-                    def _fmt_min_no_secs(m):
+                    # Format minutes for toast
+                    def _fmt_min(m):
                         try:
                             total_min = int(round(float(m)))
                         except Exception:
@@ -404,38 +355,10 @@ def _render_log_time_section(user_id, task_id, task_title):
                         hrs = total_min // 60
                         mins = total_min % 60
                         return f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
-
                     st.session_state[f'_pending_log_toast_{task_id}'] = (
-                        f"✅ Logged {_fmt_min_no_secs(minutes)} for '{task_title}'"
+                        f"✅ Logged {_fmt_min(log_mins)} for '{task_title}'"
                     )
-                    st.rerun() # Ensure UI reflects saved data immediately
-
-            # Handle Enter-to-save from the note text_input on_change callback
-            pending_log_key = f'_pending_log_save_{task_id}'
-            if st.session_state.get(pending_log_key):
-                st.session_state.pop(pending_log_key, None)
-                minutes = st.session_state[f'_log_min_local_{task_id}']
-                db.add_time_log(
-                    user_id, task_id, minutes,
-                    st.session_state[f'_log_date_local_{task_id}'].isoformat(),
-                    st.session_state[f'_log_note_local_{task_id}'], "manual"
-                )
-                st.session_state[_log_key] = False
-                st.session_state[f'_log_min_local_{task_id}'] = 25
-                st.session_state[f'_log_date_local_{task_id}'] = date.today()
-                st.session_state[f'_log_note_local_{task_id}'] = ""
-                def _fmt_min_enter(m):
-                    try:
-                        total_min = int(round(float(m)))
-                    except Exception:
-                        total_min = int(m)
-                    hrs = total_min // 60
-                    mins = total_min % 60
-                    return f"{hrs}h {mins}m" if hrs > 0 else f"{mins}m"
-                st.session_state[f'_pending_log_toast_{task_id}'] = (
-                    f"✅ Logged {_fmt_min_enter(minutes)} for '{task_title}'"
-                )
-                st.rerun()
+                    st.rerun()
 
         
 
