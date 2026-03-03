@@ -548,6 +548,9 @@ def _dark_scrollbar_css() -> str:
     }
     """
 
+# ─── Restore session BEFORE theme init so saved theme is available ──
+_is_auth = is_authenticated()
+
 # ─── Theme Initialization ────────────────────────────────────
 if 'theme' not in st.session_state:
     st.session_state['theme'] = 'light'
@@ -570,7 +573,7 @@ else:
 st.markdown(_build_theme_css(st.session_state['theme']), unsafe_allow_html=True)
 
 # ─── Authentication Gate ──────────────────────────────────────
-if not is_authenticated():
+if not _is_auth:
     render_login_page()
     st.stop()
 
