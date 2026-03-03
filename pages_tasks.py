@@ -144,6 +144,7 @@ def render_sidebar(user_id):
                     for _k in list(st.session_state.keys()):
                         if _k.startswith('sub_open_') or _k.startswith('log_open_') or _k.startswith('completed_sub_open_'):
                             st.session_state[_k] = False
+                    st.session_state['_scroll_to_top'] = True
                     st.rerun()
             with col_del:
                 if st.button("🗑️", key=f"del_cat_{cat['id']}", help="Delete", type="tertiary"):
@@ -594,10 +595,26 @@ def render_tasks_page():
     
     # ─── Scroll-to-top trigger (delete confirmation or category change) ────
     if st.session_state.pop('_scroll_to_top', False):
-        components.html(
-            '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"smooth"});</script>',
-            height=0
-        )
+        _scroll_js = """
+        <script>
+        (function() {
+            var doc = window.parent.document;
+            var targets = [
+                doc.querySelector('[data-testid="stMain"]'),
+                doc.querySelector('section.main'),
+                doc.querySelector('.main'),
+                doc.querySelector('[data-testid="stAppViewContainer"]')
+            ];
+            for (var i = 0; i < targets.length; i++) {
+                if (targets[i]) {
+                    targets[i].scrollTop = 0;
+                }
+            }
+            window.parent.scrollTo(0, 0);
+        })();
+        </script>
+        """
+        components.html(_scroll_js, height=0, scrolling=False)
 
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
