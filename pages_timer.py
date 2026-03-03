@@ -493,7 +493,8 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
             if st.session_state['timer_running'] and _HAS_AUTOREFRESH:
                 remaining_secs = max(0, total_seconds - elapsed)
                 if remaining_secs > 0:
-                    # Add 1.5s buffer so JS has time to show notification before Python saves
+                    # Hide the autorefresh iframe (it renders a visible grey box)
+                    st.markdown('<style>iframe[title="streamlit_autorefresh.st_autorefresh"]{display:none;height:0;}</style>', unsafe_allow_html=True)
                     st_autorefresh(interval=int((remaining_secs + 1.5) * 1000), limit=1, key="pomodoro_auto_save")
         else:
             js_timer_component(
@@ -515,7 +516,10 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
 
         st.write("") # Spacer
 
-        if not st.session_state['timer_running']:
+        # Skip button rendering when auto-save is about to fire
+        if do_save:
+            pass  # Auto-save triggered; buttons not needed, save logic runs below
+        elif not st.session_state['timer_running']:
             if elapsed == 0:
                 # State 1: Not started - Centered Start Button
                 _, col_center, _ = st.columns([1, 2, 1])
@@ -572,7 +576,7 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                         db.delete_active_timer(user_id) # Clear DB
                         st.session_state['db_synced'] = False
                         st.rerun() 
-        else:
+        elif st.session_state['timer_running']:
             # State 2: Running - Pause | Stop
             col_pause, col_stop = st.columns(2)
             with col_pause:
