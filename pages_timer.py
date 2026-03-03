@@ -269,9 +269,9 @@ def render_timer_page():
     # Render the interactive timer dashboard as a fragment for high performance
     # ─── Scroll-to-top trigger (delete confirmation) ─────────────────────────
     if st.session_state.pop('_scroll_to_top', False):
-        st.markdown(
+        components.html(
             '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"smooth"});</script>',
-            unsafe_allow_html=True
+            height=0
         )
 
     # If a delete confirmation was requested elsewhere, show a modal here

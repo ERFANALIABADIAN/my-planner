@@ -310,8 +310,8 @@ def _build_theme_css(theme: str) -> str:
         border-radius: 8px;
     }}
     [data-testid="stFormSubmitButton"] > button:hover {{
-        background-color: {_accent} !important;
-        color: #FFFFFF !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,{'0.3' if _dark else '0.1'});
     }}
     .stProgress > div > div > div {{ border-radius: 999px; }}
     hr {{ border: none; border-top: 1px solid {_border}; margin: 0.25rem 0; }}

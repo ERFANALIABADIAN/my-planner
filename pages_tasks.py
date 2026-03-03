@@ -3,6 +3,7 @@ Tasks page - Category & Task management with subtasks.
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from datetime import date
 import database as db
 import time
@@ -593,9 +594,9 @@ def render_tasks_page():
     
     # ─── Scroll-to-top trigger (delete confirmation or category change) ────
     if st.session_state.pop('_scroll_to_top', False):
-        st.markdown(
+        components.html(
             '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"smooth"});</script>',
-            unsafe_allow_html=True
+            height=0
         )
 
     # If a delete confirmation was requested elsewhere, show a modal here
