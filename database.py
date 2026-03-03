@@ -10,6 +10,7 @@ import json
 import requests as http_requests
 from datetime import datetime, date, timedelta
 from contextlib import contextmanager
+from functools import lru_cache
 
 try:
     import streamlit as st
@@ -53,6 +54,15 @@ class DictRow(dict):
 
 # ─── Turso HTTP API Helper ──────────────────────────────────────────────────────
 
+# Persistent HTTP session with connection pooling for Turso requests.
+# Avoids TCP/TLS handshake on every query (major latency win for cloud DB).
+_turso_session = http_requests.Session()
+_turso_session.headers.update({"Content-Type": "application/json"})
+if TURSO_AUTH_TOKEN:
+    _turso_session.headers["Authorization"] = f"Bearer {TURSO_AUTH_TOKEN}"
+
+
+@lru_cache(maxsize=1)
 def _turso_api_url():
     url = TURSO_URL.rstrip("/")
     if url.startswith("libsql://"):
@@ -64,6 +74,10 @@ def _turso_api_url():
     return url
 
 
+# Pre-built type mappings for parameter serialisation (avoid repeated isinstance)
+_PARAM_TYPE_MAP = {int: "integer", float: "float", str: "text"}
+
+
 def _turso_execute(sql: str, params: list = None, fetch: str = "all"):
     if params is None:
         params = []
@@ -72,14 +86,9 @@ def _turso_execute(sql: str, params: list = None, fetch: str = "all"):
     for p in params:
         if p is None:
             api_params.append({"type": "null"})
-        elif isinstance(p, int):
-            api_params.append({"type": "integer", "value": str(p)})
-        elif isinstance(p, float):
-            api_params.append({"type": "float", "value": p})
-        elif isinstance(p, str):
-            api_params.append({"type": "text", "value": p})
         else:
-            api_params.append({"type": "text", "value": str(p)})
+            ptype = _PARAM_TYPE_MAP.get(type(p), "text")
+            api_params.append({"type": ptype, "value": str(p) if ptype != "float" else p})
 
     body = {
         "requests": [
@@ -87,12 +96,8 @@ def _turso_execute(sql: str, params: list = None, fetch: str = "all"):
             {"type": "close"}
         ]
     }
-    headers = {
-        "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
-        "Content-Type": "application/json"
-    }
 
-    resp = http_requests.post(_turso_api_url(), json=body, headers=headers, timeout=30)
+    resp = _turso_session.post(_turso_api_url(), json=body, timeout=30)
     resp.raise_for_status()
     data = resp.json()
 
@@ -145,11 +150,7 @@ def _turso_executescript(sql_script: str):
     reqs.append({"type": "close"})
 
     body = {"requests": reqs}
-    headers = {
-        "Authorization": f"Bearer {TURSO_AUTH_TOKEN}",
-        "Content-Type": "application/json"
-    }
-    resp = http_requests.post(_turso_api_url(), json=body, headers=headers, timeout=30)
+    resp = _turso_session.post(_turso_api_url(), json=body, timeout=30)
     resp.raise_for_status()
 
 
@@ -287,6 +288,8 @@ SCHEMA_SQL = """
 
 
 def init_db():
+    """Initialize the database schema. Wrapped in @st.cache_resource by the
+    caller (or guarded below) so it only executes once per server lifetime."""
     if USE_TURSO:
         _turso_executescript(SCHEMA_SQL)
         # Migration: add theme column if missing
@@ -313,6 +316,13 @@ def init_db():
                 conn.commit()
             except Exception:
                 pass  # Column already exists
+
+
+# Wrap init_db so it runs only once per server lifetime
+if HAS_STREAMLIT:
+    init_db = st.cache_resource(show_spinner=False)(
+        init_db
+    )
 
 
 # ─── Universal Query Executor ──────────────────────────────────────────────────
@@ -348,11 +358,7 @@ def create_user(username: str, password_hash: str, display_name: str = None) -> 
 
 def update_user_theme(user_id: int, theme: str):
     """Update user theme preference."""
-    if USE_TURSO:
-        _turso_execute("UPDATE users SET theme = ? WHERE id = ?", [theme, user_id])
-    else:
-        with get_connection() as conn:
-            conn.execute("UPDATE users SET theme = ? WHERE id = ?", (theme, user_id))
+    _query("UPDATE users SET theme = ? WHERE id = ?", [theme, user_id], fetch="none")
 
 
 def get_user_by_username(username: str):
@@ -387,12 +393,21 @@ def update_category(cat_id: int, name: str = None, color: str = None, icon: str 
     if HAS_STREAMLIT:
         get_categories.clear()
         get_tasks.clear()
+    # Batch all updates into a single query
+    updates = []
+    params = []
     if name:
-        _query("UPDATE categories SET name = ? WHERE id = ?", [name, cat_id], fetch="none")
+        updates.append("name = ?")
+        params.append(name)
     if color:
-        _query("UPDATE categories SET color = ? WHERE id = ?", [color, cat_id], fetch="none")
+        updates.append("color = ?")
+        params.append(color)
     if icon:
-        _query("UPDATE categories SET icon = ? WHERE id = ?", [icon, cat_id], fetch="none")
+        updates.append("icon = ?")
+        params.append(icon)
+    if updates:
+        params.append(cat_id)
+        _query(f"UPDATE categories SET {', '.join(updates)} WHERE id = ?", params, fetch="none")
 
 
 def delete_category(cat_id: int):
@@ -410,9 +425,13 @@ if HAS_STREAMLIT:
         query = """
             SELECT t.*, 
                    c.name as category_name, c.color as category_color, c.icon as category_icon,
-                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+                   COALESCE(tl_sum.total_time, 0) as total_time
             FROM tasks t
-            JOIN categories c ON t.category_id = c.id 
+            JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT task_id, SUM(duration_minutes) as total_time
+                FROM time_logs GROUP BY task_id
+            ) tl_sum ON tl_sum.task_id = t.id
             WHERE t.user_id = ?
         """
         params = [user_id]
@@ -430,20 +449,29 @@ if HAS_STREAMLIT:
         q = """
             SELECT t.*, 
                    c.name as category_name, c.color as category_color, c.icon as category_icon,
-                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+                   COALESCE(tl_sum.total_time, 0) as total_time
             FROM tasks t
-            JOIN categories c ON t.category_id = c.id 
+            JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT task_id, SUM(duration_minutes) as total_time
+                FROM time_logs WHERE task_id = ?
+                GROUP BY task_id
+            ) tl_sum ON tl_sum.task_id = t.id
             WHERE t.id = ?
         """
-        return _query(q, [task_id], fetch="one")
+        return _query(q, [task_id, task_id], fetch="one")
 else:
     def get_tasks(user_id: int, category_id: int = None, status: str = None):
         query = """
             SELECT t.*, 
                    c.name as category_name, c.color as category_color, c.icon as category_icon,
-                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+                   COALESCE(tl_sum.total_time, 0) as total_time
             FROM tasks t
-            JOIN categories c ON t.category_id = c.id 
+            JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT task_id, SUM(duration_minutes) as total_time
+                FROM time_logs GROUP BY task_id
+            ) tl_sum ON tl_sum.task_id = t.id
             WHERE t.user_id = ?
         """
         params = [user_id]
@@ -460,12 +488,17 @@ else:
         q = """
             SELECT t.*, 
                    c.name as category_name, c.color as category_color, c.icon as category_icon,
-                   (SELECT COALESCE(SUM(duration_minutes), 0) FROM time_logs WHERE task_id = t.id) as total_time
+                   COALESCE(tl_sum.total_time, 0) as total_time
             FROM tasks t
-            JOIN categories c ON t.category_id = c.id 
+            JOIN categories c ON t.category_id = c.id
+            LEFT JOIN (
+                SELECT task_id, SUM(duration_minutes) as total_time
+                FROM time_logs WHERE task_id = ?
+                GROUP BY task_id
+            ) tl_sum ON tl_sum.task_id = t.id
             WHERE t.id = ?
         """
-        return _query(q, [task_id], fetch="one")
+        return _query(q, [task_id, task_id], fetch="one")
 
 
 def create_task(user_id: int, category_id: int, title: str, description: str = "", goal_minutes: float = 0):
@@ -481,22 +514,25 @@ def update_task(task_id: int, **kwargs):
     if HAS_STREAMLIT:
         get_tasks.clear()
         get_task_by_id.clear()
-    allowed = {'title', 'description', 'status', 'priority', 'category_id', 'sort_order'}
-    # Allow updating goal_minutes as well
-    allowed = allowed.union({'goal_minutes'})
+    allowed = {'title', 'description', 'status', 'priority', 'category_id', 'sort_order', 'goal_minutes'}
+    # Collect all valid updates into a single query
+    updates = []
+    params = []
     for key, val in kwargs.items():
         if key in allowed and val is not None:
-            # Ensure numeric values for goal_minutes are stored correctly
             if key == 'goal_minutes':
                 try:
                     val = float(val)
                 except Exception:
-                    # If conversion fails, skip update for this field
                     continue
-            _query(f"UPDATE tasks SET {key} = ? WHERE id = ?", [val, task_id], fetch="none")
+            updates.append(f"{key} = ?")
+            params.append(val)
     if kwargs.get('status') == 'completed':
-        _query("UPDATE tasks SET completed_at = ? WHERE id = ?",
-               [datetime.now().isoformat(), task_id], fetch="none")
+        updates.append("completed_at = ?")
+        params.append(datetime.now().isoformat())
+    if updates:
+        params.append(task_id)
+        _query(f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?", params, fetch="none")
 
 
 def delete_task(task_id: int):
@@ -840,7 +876,6 @@ def get_active_timer(user_id: int):
 
 def save_active_timer(user_id: int, task_id: int, start_time: str, paused_elapsed: float, is_running: bool, mode: str, pomodoro_minutes: int, subtask_id: int = None):
     """Upsert active timer state."""
-    # SQLite UPSERT
     sql = """
     INSERT INTO active_timers (user_id, task_id, subtask_id, start_time, paused_elapsed, is_running, mode, pomodoro_minutes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -854,23 +889,13 @@ def save_active_timer(user_id: int, task_id: int, start_time: str, paused_elapse
         pomodoro_minutes=excluded.pomodoro_minutes,
         last_updated=CURRENT_TIMESTAMP
     """
-    if USE_TURSO:
-        # Turso/libsql supports UPSERT too
-        params = [user_id, task_id, subtask_id, start_time, paused_elapsed, 1 if is_running else 0, mode, pomodoro_minutes]
-        _turso_execute(sql, params, "none")
-    else:
-        with get_connection() as conn:
-            params = [user_id, task_id, subtask_id, start_time, paused_elapsed, 1 if is_running else 0, mode, pomodoro_minutes]
-            conn.execute(sql, params)
+    params = [user_id, task_id, subtask_id, start_time, paused_elapsed, 1 if is_running else 0, mode, pomodoro_minutes]
+    _query(sql, params, fetch="none")
 
 
 def delete_active_timer(user_id: int):
     """Clear active timer state."""
-    if USE_TURSO:
-        _turso_execute("DELETE FROM active_timers WHERE user_id = ?", [user_id], "none")
-    else:
-        with get_connection() as conn:
-            conn.execute("DELETE FROM active_timers WHERE user_id = ?", [user_id])
+    _query("DELETE FROM active_timers WHERE user_id = ?", [user_id], fetch="none")
 
 
 # ─── Session Token Functions ──────────────────────────────────────────────────

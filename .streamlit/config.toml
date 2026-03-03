@@ -1,8 +1,7 @@
 [theme]
 primaryColor = "#4A90D9"
-backgroundColor = "#FAFBFC"
-secondaryBackgroundColor = "#F0F2F6"
-textColor = "#1E1E2E"
+# backgroundColor, secondaryBackgroundColor, textColor are controlled
+# dynamically via CSS in app.py _build_theme_css() for light/dark toggle.
 font = "sans serif"
 
 [server]
@@ -10,6 +9,14 @@ headless = true
 port = 8501
 enableCORS = false
 enableXsrfProtection = true
+# Faster file watcher (polls less aggressively on non-Linux)
+fileWatcherType = "poll"
+# Allow larger messages from client (avoids truncation on big widget states)
+maxMessageSize = 200
+
+[runner]
+# Rerun the entire script top-to-bottom quickly (default); do not add artificial delays
+fastReruns = true
 
 [browser]
 gatherUsageStats = false
