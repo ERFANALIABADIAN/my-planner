@@ -447,9 +447,10 @@ def _render_task_item(task, user_id, categories, text_col, muted_col, card_bg, d
     if not task:
         return
 
-    # Use provided subtasks mapping/list if available, otherwise fetch for this task
-    if subtasks is None:
-        subtasks = db.get_subtasks(task['id'])
+    # Always re-fetch subtasks inside the fragment so we get the latest
+    # state after checkbox toggles (the passed `subtasks` may be stale
+    # because @st.fragment reruns with the same original arguments).
+    subtasks = db.get_subtasks(task['id'])
 
     # Calculate progress
     total_time = task.get('total_time', 0)
