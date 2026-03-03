@@ -546,22 +546,6 @@ def _dark_scrollbar_css() -> str:
         scrollbar-color: #3D4160 #1E2130 !important;
         scrollbar-width: thin !important;
     }}
-    /* ── Smooth page transition animation ── */
-    @keyframes pageFadeSlideIn {{
-        from {{ opacity: 0; transform: translateY(14px); }}
-        to   {{ opacity: 1; transform: translateY(0); }}
-    }}
-    [data-testid="stMainBlockContainer"] > div {{
-        animation: pageFadeSlideIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-    }}
-    /* Sidebar also gets a subtle fade */
-    @keyframes sidebarFadeIn {{
-        from {{ opacity: 0; }}
-        to   {{ opacity: 1; }}
-    }}
-    [data-testid="stSidebarUserContent"] > div {{
-        animation: sidebarFadeIn 0.3s ease both;
-    }}
     """
 
 # ─── Restore session BEFORE theme init so saved theme is available ──
@@ -640,12 +624,16 @@ with st.sidebar:
 # ─── Page Router ──────────────────────────────────────────────
 current_page = st.session_state.get('current_page', 'tasks')
 
-if current_page == 'tasks':
-    render_tasks_page()
-elif current_page == 'timer':
-    render_timer_page()
-elif current_page == 'analytics':
-    render_analytics_page()
+# Wrap page content in a keyed container to force Streamlit to recreate
+# the entire DOM subtree when switching pages. This prevents fragment
+# elements from the previous page lingering below the new page content.
+with st.container(key=f"_page_{current_page}"):
+    if current_page == 'tasks':
+        render_tasks_page()
+    elif current_page == 'timer':
+        render_timer_page()
+    elif current_page == 'analytics':
+        render_analytics_page()
 
 # ─── Sidebar Footer (Refresh / Logout) ───────────────────────
 with st.sidebar:
