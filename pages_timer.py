@@ -268,21 +268,20 @@ def render_timer_page():
 
     # Render the interactive timer dashboard as a fragment for high performance
     # ─── Scroll-to-top trigger (delete confirmation) ─────────────────────────
-    if st.session_state.pop('_scroll_to_top', False):
-        components.html(
-            '<script>'
-            '(function(){'
-            'var w=window.parent,d=w.document;'
-            'function go(){'
-            'w.scrollTo(0,0);'
-            '["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stMain\\"]","section.main",".main","body"]'
-            '.forEach(function(s){var el=d.querySelector(s);if(el){el.scrollTop=0;el.scrollTo(0,0);}});'
-            '}'
-            'go();setTimeout(go,80);setTimeout(go,250);'
-            '})();'
-            '</script>',
-            height=1
-        )
+    # Always render so the widget tree stays stable
+    _do_scroll = "true" if st.session_state.pop('_scroll_to_top', False) else "false"
+    components.html(
+        f'<script>if({_do_scroll}){{'
+        'var w=window.parent,d=w.document;'
+        'function go(){'
+        'w.scrollTo(0,0);d.documentElement.scrollTop=0;'
+        'var sels=["[data-testid=\\"stAppViewContainer\\"]","[data-testid=\\"stVerticalBlockBorderWrapper\\"]","[data-testid=\\"stMain\\"]","section.main",".main"];'
+        'sels.forEach(function(s){try{var el=d.querySelector(s);if(el){el.scrollTop=0;}}catch(e){}});'
+        '}'
+        'go();setTimeout(go,50);setTimeout(go,200);'
+        '}</script>',
+        height=0
+    )
 
     # If a delete confirmation was requested elsewhere, show a modal here
     if st.session_state.get('confirm_delete'):
