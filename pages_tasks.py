@@ -278,26 +278,23 @@ def _render_subtask_section(task_id, subtasks, text_col, muted_col):
                                 if st.button("🗑️", key=f"del_done_sub_{sub['id']}", help="Delete", type="tertiary"):
                                     request_delete('subtask', sub['id'], sub.get('title') or '')
 
-            # New subtask input wrapped in a form so only Enter or button
-            # click triggers save (blur / clicking away does NOT save).
-            ctr_key = f'new_sub_ctr_{task_id}'
-            if ctr_key not in st.session_state:
-                st.session_state[ctr_key] = 0
-            ctr = st.session_state[ctr_key]
-
-            with st.form(f"new_sub_form_{task_id}_{ctr}", clear_on_submit=True, border=False):
-                col_new_sub, col_add_sub = st.columns([5, 1])
-                with col_new_sub:
-                    new_sub_title = st.text_input(
-                        "New subtask", placeholder="Add a subtask...",
-                        key=f"new_sub_{task_id}_{ctr}", label_visibility="collapsed"
-                    )
-                with col_add_sub:
-                    submitted = st.form_submit_button("➕")
-                if submitted and new_sub_title and new_sub_title.strip():
-                    db.create_subtask(task_id, new_sub_title.strip())
-                    st.session_state[ctr_key] = ctr + 1
-                    st.rerun()
+            # New subtask input – plain widgets, only ➕ button saves.
+            # No st.form / on_change so blur and accidental keys never save.
+            _nsub_key = f"new_sub_text_{task_id}"
+            col_new_sub, col_add_sub = st.columns([5, 1])
+            with col_new_sub:
+                new_sub_title = st.text_input(
+                    "New subtask", placeholder="Add a subtask...",
+                    key=_nsub_key, label_visibility="collapsed"
+                )
+            with col_add_sub:
+                if st.button("➕", key=f"add_sub_{task_id}"):
+                    _val = st.session_state.get(_nsub_key, "")
+                    if _val and _val.strip():
+                        db.create_subtask(task_id, _val.strip())
+                        # Clear the input for next use
+                        st.session_state[_nsub_key] = ""
+                        st.rerun()
 
 
 def _render_log_time_section(user_id, task_id, task_title):
@@ -319,28 +316,26 @@ def _render_log_time_section(user_id, task_id, task_title):
             st.rerun()
 
         if _log_open:
-            # Wrapped in a form so only Enter or 💾 click saves
-            # (blur / clicking away / accidental keystrokes do NOT save).
-            with st.form(f"log_time_form_{task_id}", border=False):
-                col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
-                with col_dur:
-                    log_mins = st.number_input(
-                        "Minutes", min_value=1, value=25,
-                        key=f"log_min_input_{task_id}", label_visibility="collapsed"
-                    )
-                with col_date:
-                    log_date = st.date_input(
-                        "Date", value=date.today(),
-                        key=f"log_date_input_{task_id}", label_visibility="collapsed"
-                    )
-                with col_note:
-                    log_note = st.text_input(
-                        "Note", placeholder="What did you work on?",
-                        key=f"log_note_input_{task_id}", label_visibility="collapsed"
-                    )
-                with col_add:
-                    submitted = st.form_submit_button("💾")
-                if submitted:
+            # Plain widgets – only 💾 button saves.
+            # No st.form / on_change so blur and accidental keys never save.
+            col_dur, col_date, col_note, col_add = st.columns([2, 2, 3, 1])
+            with col_dur:
+                log_mins = st.number_input(
+                    "Minutes", min_value=1, value=25,
+                    key=f"log_min_input_{task_id}", label_visibility="collapsed"
+                )
+            with col_date:
+                log_date = st.date_input(
+                    "Date", value=date.today(),
+                    key=f"log_date_input_{task_id}", label_visibility="collapsed"
+                )
+            with col_note:
+                log_note = st.text_input(
+                    "Note", placeholder="What did you work on?",
+                    key=f"log_note_input_{task_id}", label_visibility="collapsed"
+                )
+            with col_add:
+                if st.button("💾", key=f"save_log_{task_id}"):
                     db.add_time_log(
                         user_id, task_id, log_mins,
                         log_date.isoformat(), log_note, "manual"
