@@ -4,6 +4,7 @@ Run with: streamlit run app.py
 """
 
 import streamlit as st
+import streamlit.components.v1 as components
 from database import init_db, update_user_theme
 from auth import is_authenticated, render_login_page, logout_user
 from pages_tasks import render_tasks_page, render_sidebar
@@ -618,6 +619,32 @@ with st.sidebar:
     # Render the categories area (kept consistent across pages)
     render_sidebar(st.session_state['user_id'])
 
+
+# ─── Scroll to top on category / page switch ─────────────────
+if st.session_state.pop('_scroll_to_top', False):
+    components.html(
+        """
+        <script>
+        const root = window.parent.document;
+        // Try every known scrollable container Streamlit uses
+        const selectors = [
+            'section.main',
+            '[data-testid="stAppViewContainer"]',
+            '[data-testid="stMain"]',
+            '[data-testid="stMainBlockContainer"]',
+            '.main .block-container',
+        ];
+        for (const sel of selectors) {
+            const el = root.querySelector(sel);
+            if (el) { el.scrollTop = 0; }
+        }
+        // Also scroll the window / root scrollable element
+        root.documentElement.scrollTop = 0;
+        root.body.scrollTop = 0;
+        </script>
+        """,
+        height=0,
+    )
 
 # ─── Page Router ──────────────────────────────────────────────
 current_page = st.session_state.get('current_page', 'tasks')

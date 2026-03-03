@@ -662,13 +662,6 @@ def render_tasks_page():
 
     # Sidebar rendering is moved to render_sidebar(user_id) so it can be shown on all pages.
 
-    # ─── Scroll to top when switching categories ─────────────
-    if st.session_state.pop('_scroll_to_top', False):
-        components.html(
-            '<script>window.parent.document.querySelector("section.main").scrollTo({top:0,behavior:"instant"});</script>',
-            height=0,
-        )
-
     # ─── Main Content: Tasks ──────────────────────────────────
     st.markdown("## 📋 My Tasks")
 
