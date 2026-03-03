@@ -135,15 +135,10 @@ def render_timer_page():
 
     st.markdown("## ⏱ Focus Timer")
 
-    if not tasks:
-        st.info("You need active tasks to use the timer. Go to Tasks page to create some!")
-        return
-
     # ─── Build task options BEFORE columns so we can use them for sync ───
     task_options = {}
     for t in tasks:
-        label = f"{t['category_icon']} {t['title']} ({t['category_name']})"
-        task_options[label] = t['id']
+        task_options[f"{t['category_icon']} {t['title']} ({t['category_name']})"] = t['id']
 
     # ─── Initialize session state ─────────────────────────────────────────
     if 'timer_running' not in st.session_state:
@@ -174,18 +169,26 @@ def render_timer_page():
     active_task_id = st.session_state.get('timer_task_id')
     if active_task_id and (st.session_state['timer_running']
                            or st.session_state.get('timer_paused_elapsed', 0) > 0):
-        # Find the task to get its category
-        active_task = next((t for t in tasks if t['id'] == active_task_id), None)
-        if active_task:
-            # Sync category selectbox
-            correct_cat_label = next(
-                (f"{c['icon']} {c['name']}" for c in categories if c['id'] == active_task['category_id']), None
-            )
-            if correct_cat_label:
-                st.session_state['timer_category_select'] = correct_cat_label
-            # Sync task selectbox
-            correct_task_label = f"{active_task['category_icon']} {active_task['title']}"
-            st.session_state['timer_task_select'] = correct_task_label
+        # Check if this is a freestyle session
+        _freestyle_task_id = None
+        try:
+            _freestyle_task_id = db.get_or_create_freestyle_task(user_id)
+        except Exception:
+            pass
+        if active_task_id == _freestyle_task_id:
+            # Freestyle session – keep category at default placeholder
+            st.session_state['timer_category_select'] = '— Freestyle (no task) —'
+        else:
+            # Find the task to get its category
+            active_task = next((t for t in tasks if t['id'] == active_task_id), None)
+            if active_task:
+                correct_cat_label = next(
+                    (f"{c['icon']} {c['name']}" for c in categories if c['id'] == active_task['category_id']), None
+                )
+                if correct_cat_label:
+                    st.session_state['timer_category_select'] = correct_cat_label
+                correct_task_label = f"{active_task['category_icon']} {active_task['title']}"
+                st.session_state['timer_task_select'] = correct_task_label
 
     # ─── Sync subtask selectbox ───────────────────────────────────────────────
     active_subtask_id = st.session_state.get('timer_subtask_id')
@@ -282,9 +285,12 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
     with col_config:
         st.markdown("### 🎯 Select Task")
 
-        # Step 1: Category selection
-        cat_options = {"— Select a category —": None}
+        # Step 1: Category selection (with Freestyle option)
+        cat_options = {"— Freestyle (no task) —": None}
+        # Filter out hidden __freestyle__ category from display
         for c in categories:
+            if c['name'] == '__freestyle__':
+                continue
             cat_label = f"{c['icon']} {c['name']}"
             cat_options[cat_label] = c['id']
 
@@ -295,13 +301,14 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
         )
         selected_cat_id = cat_options[selected_cat_label]
 
-        # Step 2: Task selection (only shown when a category is selected)
+        # Step 2: Task / Freestyle logic
         selected_task_id = None
         selected_subtask_id = None
-        _needs_task = True  # Must pick a task to start timer
+        _is_freestyle = (selected_cat_id is None)  # Freestyle when no category
+        _can_start = _is_freestyle  # Freestyle can always start
 
         if selected_cat_id is not None:
-            # Filter tasks for the selected category
+            # Filter tasks for the selected category (exclude __freestyle__ tasks)
             cat_tasks = [t for t in tasks if t['category_id'] == selected_cat_id]
             if cat_tasks:
                 cat_task_options = {"— Select a task —": None}
@@ -317,7 +324,7 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 selected_task_id = cat_task_options[selected_task_label]
 
                 if selected_task_id is not None:
-                    _needs_task = False  # Valid task selected
+                    _can_start = True  # Valid task selected
 
                     # Step 3: Subtask selection (only shown when a task is selected)
                     subtasks = db.get_subtasks(selected_task_id)
@@ -334,7 +341,10 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                             )
                             selected_subtask_id = sub_options[selected_sub_label]
             else:
-                st.info("No active tasks in this category.")
+                # Category has no tasks – allow starting (will save as Freestyle)
+                st.info("No active tasks in this category. Timer will log as ‘Freestyle’.")
+                _can_start = True
+                _is_freestyle = True
 
         st.markdown("---")
         st.markdown("### ⏰ Timer Mode")
@@ -409,8 +419,10 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
         
         # Show what task is running if loaded from DB separate from selection
         if st.session_state.get('timer_running') and st.session_state.get('timer_task_id'):
-            # Find task name
-            active_t_name = next((t['title'] for t in tasks if t['id'] == st.session_state['timer_task_id']), "Unknown Task")
+            # Find task name (show "Freestyle" for freestyle sessions)
+            active_t_name = next((t['title'] for t in tasks if t['id'] == st.session_state['timer_task_id']), None)
+            if active_t_name is None or active_t_name == 'Freestyle':
+                active_t_name = "🎯 Freestyle"
             st.markdown(f"<div style='text-align:center; color:#9CA3AF; font-size:0.9rem;'>Running: <b>{active_t_name}</b></div>", unsafe_allow_html=True)
 
         # Display timer using JavaScript component (smooth, no lag)
@@ -442,16 +454,18 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 # State 1: Not started - Centered Start Button
                 _, col_center, _ = st.columns([1, 2, 1])
                 with col_center:
-                    # Block start if category is selected but no task chosen
-                    _can_start = not _needs_task
                     if st.button("Start", use_container_width=True, type="primary", disabled=not _can_start):
+                        # Resolve task_id: use selected task, or freestyle
+                        _start_task_id = selected_task_id
+                        if _is_freestyle or _start_task_id is None:
+                            _start_task_id = db.get_or_create_freestyle_task(user_id)
                         st.session_state['timer_running'] = True
                         st.session_state['timer_start'] = datetime.now()
-                        st.session_state['timer_task_id'] = selected_task_id
+                        st.session_state['timer_task_id'] = _start_task_id
                         st.session_state['timer_subtask_id'] = selected_subtask_id
                         # Save to DB
                         db.save_active_timer(
-                            user_id, selected_task_id, 
+                            user_id, _start_task_id, 
                             st.session_state['timer_start'].isoformat(), 
                             0, True, mode_str, pom_mins, selected_subtask_id
                         )
@@ -533,6 +547,10 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
             task_id = st.session_state.get('timer_task_id', selected_task_id)
             subtask_id = st.session_state.get('timer_subtask_id', selected_subtask_id)
 
+            # Fallback: if task_id is still None, save as freestyle
+            if task_id is None:
+                task_id = db.get_or_create_freestyle_task(user_id)
+
             db.add_time_log(
                 user_id=user_id,
                 task_id=task_id,
@@ -590,9 +608,14 @@ def _render_timer_dashboard(user_id, tasks, task_options, categories):
                 subtask_badge = ""
                 if log.get('subtask_title'):
                     subtask_badge = f" <small style='color:#60A5FA;'>↳ {log['subtask_title']}</small>"
+                _task_title = log['task_title'] or 'Freestyle'
+                _cat_name = log['category_name'] or ''
+                if _cat_name == '__freestyle__':
+                    _cat_name = 'Freestyle'
+                    _task_title = '🎯 Freestyle'
                 st.markdown(
-                    f"{log['category_icon']} **{log['task_title']}**{subtask_badge} "
-                    f"<small style='color:#6B7280;'>({log['category_name']})</small>",
+                    f"{log['category_icon']} **{_task_title}**{subtask_badge} "
+                    f"<small style='color:#6B7280;'>({_cat_name})</small>",
                     unsafe_allow_html=True
                 )
                 if log['note']:

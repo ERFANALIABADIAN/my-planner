@@ -371,12 +371,12 @@ if HAS_STREAMLIT:
     @st.cache_data(ttl=30, show_spinner=False)
     def get_categories(user_id: int):
         return _query(
-            "SELECT * FROM categories WHERE user_id = ? ORDER BY sort_order, name", [user_id]
+            "SELECT * FROM categories WHERE user_id = ? AND name != '__freestyle__' ORDER BY sort_order, name", [user_id]
         )
 else:
     def get_categories(user_id: int):
         return _query(
-            "SELECT * FROM categories WHERE user_id = ? ORDER BY sort_order, name", [user_id]
+            "SELECT * FROM categories WHERE user_id = ? AND name != '__freestyle__' ORDER BY sort_order, name", [user_id]
         )
 
 
@@ -432,7 +432,7 @@ if HAS_STREAMLIT:
                 SELECT task_id, SUM(duration_minutes) as total_time
                 FROM time_logs GROUP BY task_id
             ) tl_sum ON tl_sum.task_id = t.id
-            WHERE t.user_id = ?
+            WHERE t.user_id = ? AND c.name != '__freestyle__'
         """
         params = [user_id]
         if category_id:
@@ -472,7 +472,7 @@ else:
                 SELECT task_id, SUM(duration_minutes) as total_time
                 FROM time_logs GROUP BY task_id
             ) tl_sum ON tl_sum.task_id = t.id
-            WHERE t.user_id = ?
+            WHERE t.user_id = ? AND c.name != '__freestyle__'
         """
         params = [user_id]
         if category_id:
@@ -508,6 +508,35 @@ def create_task(user_id: int, category_id: int, title: str, description: str = "
         "INSERT INTO tasks (user_id, category_id, title, description, goal_minutes) VALUES (?, ?, ?, ?, ?)",
         [user_id, category_id, title, description, goal_minutes], fetch="lastrowid"
     )
+
+
+def get_or_create_freestyle_task(user_id: int) -> int:
+    """Return the task_id for a hidden 'Freestyle' task.
+    Creates a dedicated category + task on first use."""
+    # Look for existing Freestyle category
+    row = _query(
+        "SELECT id FROM categories WHERE user_id = ? AND name = '__freestyle__'",
+        [user_id], fetch="one"
+    )
+    if row:
+        cat_id = row['id'] if isinstance(row, dict) else row[0]
+    else:
+        cat_id = _query(
+            "INSERT INTO categories (user_id, name, color, icon) VALUES (?, '__freestyle__', '#6366F1', '🎯')",
+            [user_id], fetch="lastrowid"
+        )
+    # Look for existing Freestyle task under that category
+    task_row = _query(
+        "SELECT id FROM tasks WHERE user_id = ? AND category_id = ? AND title = 'Freestyle'",
+        [user_id, cat_id], fetch="one"
+    )
+    if task_row:
+        return task_row['id'] if isinstance(task_row, dict) else task_row[0]
+    task_id = _query(
+        "INSERT INTO tasks (user_id, category_id, title, description, status) VALUES (?, ?, 'Freestyle', 'Freestyle timer sessions', 'active')",
+        [user_id, cat_id], fetch="lastrowid"
+    )
+    return task_id
 
 
 def update_task(task_id: int, **kwargs):
