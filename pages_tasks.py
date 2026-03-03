@@ -132,6 +132,9 @@ def render_sidebar(user_id):
                     type=btn_style
                 ):
                     # Ensure clicking a category always navigates to Tasks page
+                    # If coming from another page, trigger loading screen
+                    if st.session_state.get('current_page') != 'tasks':
+                        st.session_state['_page_transitioning'] = True
                     st.session_state['current_page'] = 'tasks'
                     if is_active:
                         st.session_state.pop('filter_cat_id', None)

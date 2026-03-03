@@ -612,6 +612,7 @@ with st.sidebar:
         btn_type = "primary" if st.session_state.get('current_page', 'tasks') == page_key else "secondary"
         if st.button(label, key=f"nav_{page_key}", use_container_width=True, type=btn_type):
             st.session_state['current_page'] = page_key
+            st.session_state['_page_transitioning'] = True  # Flag for loading screen
             st.rerun()
 
     # Smaller separator before content
@@ -623,6 +624,24 @@ with st.sidebar:
 
 # ─── Page Router ──────────────────────────────────────────────
 current_page = st.session_state.get('current_page', 'tasks')
+
+# Brief loading screen when switching pages to mask DOM transition
+if st.session_state.pop('_page_transitioning', False):
+    import time
+    # Show a brief loading indicator, then rerun to render actual content
+    _dark = st.session_state.get('theme', 'light') == 'dark'
+    _load_bg = "#0F1117" if _dark else "#F5F7FA"
+    _load_text = "#9CA3AF"
+    st.markdown(
+        f"""<div style='display:flex; flex-direction:column; align-items:center; 
+            justify-content:center; height:60vh; background:{_load_bg};'>
+            <div style='font-size:2.5rem; margin-bottom:1rem;'>⏳</div>
+            <div style='color:{_load_text}; font-size:1rem;'>Loading...</div>
+        </div>""",
+        unsafe_allow_html=True
+    )
+    time.sleep(0.15)  # Very brief pause
+    st.rerun()
 
 # Wrap page content in a keyed container to force Streamlit to recreate
 # the entire DOM subtree when switching pages. This prevents fragment
